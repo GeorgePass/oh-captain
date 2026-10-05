@@ -22,6 +22,9 @@ var gold := 0
 var locked_target: Node2D = null
 var fire_cooldown := 0.0
 
+## Enemies eligible for lock-on, rebuilt every physics frame, nearest first.
+var _lockable: Array[Node2D] = []
+
 var _sonar: Sonar
 var _damage_cooldown := 0.0
 
@@ -52,6 +55,7 @@ func _physics_process(delta: float) -> void:
 	if _damage_cooldown > 0.0:
 		_damage_cooldown = maxf(_damage_cooldown - delta, 0.0)
 
+	_refresh_lockable()
 	_validate_lock()
 	_read_input(delta)
 	move_and_slide()
@@ -103,9 +107,13 @@ func _resolve_contact_damage() -> void:
 	for i in get_slide_collision_count():
 		var collider := get_slide_collision(i).get_collider()
 		if collider is SeaEnemy:
+			var enemy := collider as SeaEnemy
+			# One that is running away is not fighting, so bumping into it costs
+			# nothing. Chasing it down should not also be a punishment.
+			if enemy.is_fleeing():
+				return
 			# Each species carries its own contact damage, so a crab hit hurts
 			# far more than a fish brushing past.
-			var enemy := collider as SeaEnemy
 			take_damage(enemy.contact_damage)
 			# Knocked back a little, so a committed enemy cannot grind the hull
 			# down by riding it.
@@ -246,19 +254,55 @@ func cycle_lock() -> void:
 		set_lock(ordered[(index + 1) % ordered.size()])
 
 
-## Everything close enough to see. Deliberately plain distance with no contact
-## required, so you can lock whatever is in front of you without pinging first.
-## Sonar keeps its own much longer-range logic separately.
+## Everything eligible for lock-on right now, recomputed once per physics frame
+## by `_refresh_lockable`. Sorted nearest-first, which is the order Q cycles in.
 func lockable() -> Array[Node2D]:
+	return _lockable
+
+
+## Decides who can be locked, and writes the answer onto each enemy so the world
+## can draw the right marker without asking back.
+##
+## Three ways to qualify, in order of how much they cost the enemy:
+##   1. Inside visual range. Plain distance, no line-of-sight test.
+##   2. On a sonar contact, at any distance. This is the whole payoff of pinging.
+##   3. Inside visual range plus a margin, holding an eight second grace window
+##      that keeps draining once that band is cleared, so a target which slips
+##      out of sight is not lost on the frame it happens.
+## Past three times visual range nothing is held by the window at all.
+func _refresh_lockable() -> void:
 	var out: Array[Node2D] = []
-	var reach := GameConfig.LOCK_VISUAL_RANGE
+	var visual := GameConfig.LOCK_VISUAL_RANGE
+	var band := visual + GameConfig.LOCK_RELEASE_MARGIN
+	var hard := visual * GameConfig.LOCK_RELEASE_HARD_MULT
+
 	for node in get_tree().get_nodes_in_group(SeaEnemy.GROUP):
-		var enemy := node as Node2D
+		var enemy := node as SeaEnemy
 		if enemy == null or not is_instance_valid(enemy):
 			continue
-		if global_position.distance_squared_to(enemy.global_position) <= reach * reach:
+		var d := global_position.distance_to(enemy.global_position)
+		var on_sonar := _sonar != null and _sonar.has_contact(enemy)
+
+		# The margin makes the edge of sight forgiving: an enemy has to actually
+		# clear visual range plus the margin before the grace clock starts, so
+		# drifting along the boundary neither drops the lock nor flickers it.
+		var eligible := true
+		if d <= band or on_sonar:
+			enemy.set_lock_grace(GameConfig.LOCK_RELEASE_TIME)
+		elif d <= hard:
+			# Out of sight, but the window is still holding the lock.
+			eligible = enemy.lock_grace_left() > 0.0
+		else:
+			# Genuinely gone. The window is not allowed to stretch this far.
+			enemy.set_lock_grace(0.0)
+			eligible = false
+
+		enemy.lockable = eligible
+		if eligible:
 			out.append(enemy)
-	return out
+
+	out.sort_custom(_by_distance)
+	_lockable = out
 
 
 func contacts() -> Array[Node2D]:
@@ -270,6 +314,10 @@ func contacts() -> Array[Node2D]:
 func set_lock(target: Node2D) -> void:
 	if locked_target == target:
 		return
+	# Clear the outgoing bracket here rather than in a later sweep, so the mark
+	# never outlives the lock by a frame.
+	if locked_target is SeaEnemy and is_instance_valid(locked_target):
+		(locked_target as SeaEnemy).locked = false
 	locked_target = target
 	lock_changed.emit(locked_target)
 
@@ -278,19 +326,20 @@ func clear_lock() -> void:
 	set_lock(null)
 
 
-## Drops the lock if its target has been freed or drifted out of sight. A fish
-## killed by a torpedo is removed from the tree but lingers as a freed object
-## until the end of the frame, and a live one walks out of range in plain
-## sight, so both have to be caught here rather than at the moment of the shot.
+## Drops the lock if its target has been freed or is no longer eligible, and
+## publishes the bracket on whoever is held. Runs after `_refresh_lockable`, so
+## eligibility is this frame's rather than last frame's.
+##
+## A fish killed by a torpedo lingers as a freed object until the end of the
+## frame, and one that swims out of sight is kept alive by the grace window
+## inside `_refresh_lockable` rather than being lost on the frame it happens.
 func _validate_lock() -> void:
 	if locked_target == null:
 		return
-	if not is_instance_valid(locked_target):
+	if not is_instance_valid(locked_target) or not _lockable.has(locked_target):
 		clear_lock()
 		return
-	if global_position.distance_squared_to(locked_target.global_position) \
-			> GameConfig.LOCK_VISUAL_RANGE * GameConfig.LOCK_VISUAL_RANGE:
-		clear_lock()
+	(locked_target as SeaEnemy).locked = true
 
 
 func _by_distance(a: Node2D, b: Node2D) -> bool:

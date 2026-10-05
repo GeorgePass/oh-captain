@@ -9,6 +9,8 @@ const CONTACT_COLOR := Color(0.42, 0.72, 0.88)
 const ALERT_COLOR := Color(0.95, 0.72, 0.25)
 ## Has the hull in sight.
 const HOSTILE_COLOR := Color(0.92, 0.26, 0.22)
+## Broken and running for it.
+const FLEEING_COLOR := Color(0.52, 0.80, 0.70)
 const LOCK_COLOR := Color(1.0, 0.86, 0.35)
 const BEAM_COLOR := Color(1.0, 0.86, 0.35, 0.28)
 const RANGE_COLOR := Color(0.30, 0.82, 0.78, 0.85)
@@ -81,7 +83,9 @@ func _draw() -> void:
 		var tint := CONTACT_COLOR
 		if contact is SeaEnemy:
 			var enemy := contact as SeaEnemy
-			if enemy.is_hostile():
+			if enemy.is_fleeing():
+				tint = FLEEING_COLOR
+			elif enemy.is_hostile():
 				tint = HOSTILE_COLOR
 			elif enemy.is_alert():
 				tint = ALERT_COLOR

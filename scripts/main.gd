@@ -87,6 +87,7 @@ func _spawn_fish() -> void:
 	for i in FISH_COUNT:
 		var fish := scene.instantiate() as EnemyFish
 		fish.position = _offscreen_point()
+		fish.died.connect(_on_enemy_died)
 		fish_container.add_child(fish)
 
 
@@ -100,7 +101,21 @@ func _spawn_crabs() -> void:
 	for i in CRAB_COUNT:
 		var crab := scene.instantiate() as EnemyCrab
 		crab.position = _offscreen_point()
+		crab.died.connect(_on_enemy_died)
 		crab_container.add_child(crab)
+
+
+## Relays a death to everything still alive. A fish already on its last point
+## bolts when it sees a sibling go; anything healthier carries on hunting.
+## Broadcasting from here rather than from each enemy keeps the wiring in one
+## place and means a fish spawned later is covered automatically.
+func _on_enemy_died(dead: Node2D) -> void:
+	var at := dead.global_position
+	for node in get_tree().get_nodes_in_group(SeaEnemy.GROUP):
+		var enemy := node as SeaEnemy
+		if enemy == null or enemy == dead:
+			continue
+		enemy.on_neighbour_died(at)
 
 
 func _random_world_point() -> Vector2:

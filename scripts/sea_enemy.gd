@@ -2,15 +2,23 @@ class_name SeaEnemy
 extends CharacterBody2D
 ## Shared base for everything that hunts the player.
 ##
-## Three states. PASSIVE drifts and ignores the hull entirely. ALERT has a
-## rough idea where the player is and moves to look, but has not seen them.
-## HOSTILE has the player and closes in. A sonar ping only ever produces
-## ALERT: noise gives a bearing, it does not give a target, so a pinged fish
-## still has to spot the hull before it commits.
+## Four states. PASSIVE drifts and ignores the hull entirely. ALERT has a rough
+## idea where the player is and moves to look, but has not seen them. HOSTILE
+## has the player and closes in. FLEEING gives up and runs for open water, which
+## is terminal: a broken enemy that decides to leave does not change its mind.
+##
+## A sonar ping only ever produces ALERT: noise gives a bearing, it does not give
+## a target, so a pinged fish still has to spot the hull before it commits.
 
-enum State { PASSIVE, ALERT, HOSTILE }
+enum State { PASSIVE, ALERT, HOSTILE, FLEEING }
 
 const GROUP := "enemy"
+
+## Lock-on markers are drawn in the world as well as on the radar. The ring is
+## deliberately faint: most enemies in sight are lockable, so the ring is
+## background information and the bracket has to be the thing your eye lands on.
+const LOCK_RING_COLOR := Color(0.62, 0.86, 0.95, 0.40)
+const LOCK_BRACKET_COLOR := Color(1.0, 0.86, 0.35)
 
 signal died(enemy: Node2D)
 signal hp_changed(hp: int, max_hp: int)
@@ -30,6 +38,12 @@ signal hp_changed(hp: int, max_hp: int)
 var hp: int
 var state: int = State.PASSIVE
 
+## Set by the player once per physics frame: whether this enemy is currently
+## eligible for lock-on. Drives the in-sight ring drawn in the world.
+var lockable := false
+## Set alongside `lockable`, true only for the one enemy actually locked.
+var locked := false
+
 var _wander_dir := Vector2.RIGHT
 var _wander_timer := 0.0
 ## Seconds spent hearing the hull without breaking off.
@@ -45,6 +59,10 @@ var _sweep_seed := 0.0
 ## sense a passive enemy, and it is a fair trade: it works without a ping, but
 ## only if you are already close enough to hear it.
 var _swim_timer := 0.0
+## Seconds of lock-on eligibility left after drifting out of sight. The player
+## tops this up every frame while the enemy is in sight or on a sonar contact;
+## left alone it simply runs out.
+var _lock_grace := 0.0
 
 
 func _ready() -> void:
@@ -61,7 +79,10 @@ func _ready() -> void:
 
 
 func _physics_process(delta: float) -> void:
+	_lock_grace = maxf(_lock_grace - delta, 0.0)
 	match state:
+		State.FLEEING:
+			_flee(delta)
 		State.HOSTILE:
 			_chase(delta)
 		State.ALERT:
@@ -73,6 +94,54 @@ func _physics_process(delta: float) -> void:
 	_wrap_world()
 	_tick_swim(delta)
 	queue_redraw()
+
+
+# --- Fleeing -----------------------------------------------------------------
+
+## Runs directly away from the hull. Fleeing enemies deal no contact damage:
+## they are leaving, and bumping into one on the way past should not be a
+## punishment for it having given up.
+func _flee(delta: float) -> void:
+	var player := get_player()
+	if player == null:
+		_drift(delta)
+		return
+	var away := global_position - player.global_position
+	if away.length() < 1.0:
+		away = Vector2.RIGHT.rotated(rotation)
+	velocity = velocity.lerp(away.normalized() * GameConfig.ENEMY_FLEE_SPEED, accel * delta)
+	rotation = lerp_angle(rotation, velocity.angle(), turn_rate * delta)
+
+
+## Called by Main when any enemy dies nearby. A fish already on its last point
+## bolts at the sight of it; anything healthier keeps hunting. This runs before
+## the low-HP check in `take_damage`, so a wounded fish panics at a sibling
+## dying rather than only when hit itself.
+func on_neighbour_died(at: Vector2) -> void:
+	if state == State.FLEEING:
+		return
+	if hp != GameConfig.ENEMY_FLEE_PANIC_HP:
+		return
+	if global_position.distance_to(at) > GameConfig.ENEMY_FLEE_PANIC_RADIUS:
+		return
+	set_fleeing()
+
+
+## Terminal. Once an enemy decides to run it keeps running, and it can no longer
+## be alerted or committed: a creature that has given up on you cannot be talked
+## back into the fight by a ping.
+func set_fleeing() -> void:
+	if state == State.FLEEING:
+		return
+	state = State.FLEEING
+	_alert_timer = 0.0
+	_search_timer = 0.0
+	# Retiring, not attacking: a clean run for it rather than a last screech.
+	velocity = velocity.normalized() * maxf(velocity.length(), passive_speed)
+
+
+func is_fleeing() -> bool:
+	return state == State.FLEEING
 
 
 ## Occasional rustle of movement, and the only way to notice a creature that has
@@ -191,7 +260,7 @@ func _muted_by_reef(player_pos: Vector2) -> bool:
 ## A ping or a near miss: something is out there, go and look. Deliberately
 ## not hostile, so noise alone can never start a fight.
 func set_alert(approx_player_pos: Vector2 = Vector2.INF) -> void:
-	if state == State.HOSTILE:
+	if state == State.HOSTILE or state == State.FLEEING:
 		return
 	if state == State.ALERT:
 		# Already searching: keep the better fix if we have one.
@@ -208,7 +277,7 @@ func set_alert(approx_player_pos: Vector2 = Vector2.INF) -> void:
 
 ## Has actually seen the hull. From here it tracks the player directly.
 func set_hostile() -> void:
-	if state == State.HOSTILE:
+	if state == State.HOSTILE or state == State.FLEEING:
 		return
 	state = State.HOSTILE
 	if velocity.length() < passive_speed:
@@ -227,9 +296,20 @@ func _cry(urgent: bool) -> void:
 
 
 func set_passive() -> void:
+	if state == State.FLEEING:
+		return
 	state = State.PASSIVE
 	_alert_timer = 0.0
 	_search_timer = 0.0
+
+
+## Lock-on grace window, owned here but driven by the player.
+func set_lock_grace(seconds: float) -> void:
+	_lock_grace = maxf(seconds, 0.0)
+
+
+func lock_grace_left() -> float:
+	return _lock_grace
 
 
 func is_alert() -> bool:
@@ -246,6 +326,25 @@ func species() -> StringName:
 	return &"fish"
 
 
+# --- Lock marker -------------------------------------------------------------
+
+## Drawn by each species at the end of its own `_draw`, so the markers sit on
+## top of the body rather than under it.
+##
+## A faint ring means "you could lock this". The bracket means "you have", and is
+## corners rather than a circle specifically so the two states never get read as
+## the same indicator at a glance.
+func _draw_lock_marker(body_radius: float) -> void:
+	if locked:
+		var r := body_radius + 11.0
+		for corner in [Vector2(-1, -1), Vector2(1, -1), Vector2(1, 1), Vector2(-1, 1)]:
+			draw_line(corner * r, corner * (r + 9.0), LOCK_BRACKET_COLOR, 2.5)
+		return
+	if not lockable:
+		return
+	draw_arc(Vector2.ZERO, body_radius + 8.0, 0.0, TAU, 32, LOCK_RING_COLOR, 1.5, true)
+
+
 # --- Damage ------------------------------------------------------------------
 
 func take_damage(amount: int) -> void:
@@ -255,6 +354,9 @@ func take_damage(amount: int) -> void:
 	hp_changed.emit(hp, max_hp)
 	# Taking a hit always gives away where the attacker is.
 	set_hostile()
+	# Enough damage to break it, and it stops fighting before it finishes dying.
+	if hp > 0 and hp <= max_hp / GameConfig.ENEMY_FLEE_HP_DIVISOR:
+		set_fleeing()
 	if hp <= 0:
 		_drop_loot()
 		died.emit(self)

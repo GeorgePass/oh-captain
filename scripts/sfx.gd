@@ -138,6 +138,7 @@ static func contact_blip(species: StringName, state: int) -> AudioStreamWAV:
 	var dur := 0.09
 	var amp := 0.55
 	var harmonic := 0.15
+	var cutoff := 4200.0
 	match state:
 		1:
 			# Alerted: rising chirp, repeated.
@@ -151,6 +152,14 @@ static func contact_blip(species: StringName, state: int) -> AudioStreamWAV:
 			dur = 0.15
 			amp = 0.6
 			harmonic = 0.4
+		3:
+			# Fleeing: falls away and quietens, so a contact on the retreat
+			# sounds like it is leaving rather than closing.
+			rise = -240.0
+			dur = 0.17
+			amp = 0.4
+			harmonic = 0.1
+			cutoff = 2800.0
 
 	for i in n:
 		var t := float(i) / float(MIX_RATE)
@@ -167,7 +176,7 @@ static func contact_blip(species: StringName, state: int) -> AudioStreamWAV:
 				* env(t, 0.002, 0.07) * 0.4
 		lowpass(buf, 6000.0)
 	else:
-		lowpass(buf, 4200.0)
+		lowpass(buf, cutoff)
 	return make(buf)
 
 

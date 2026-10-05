@@ -19,22 +19,35 @@ func species() -> StringName:
 
 
 func _draw() -> void:
-	var hostile := is_hostile()
-	var body := Color(0.85, 0.25, 0.22) if hostile else Color(0.32, 0.52, 0.72)
-	if is_alert():
+	var body := Color(0.32, 0.52, 0.72)
+	var fin := Color(0.20, 0.32, 0.45)
+	if is_hostile():
+		body = Color(0.85, 0.25, 0.22)
+		fin = Color(0.55, 0.14, 0.12)
+	elif is_alert():
 		# Amber while it is still looking, so a searching fish is readable
 		# as searching rather than as a confirmed threat.
 		body = Color(0.85, 0.66, 0.24)
-	var fin := Color(0.20, 0.32, 0.45) if not hostile else Color(0.55, 0.14, 0.12)
-	if is_alert():
 		fin = Color(0.46, 0.34, 0.12)
+	elif is_fleeing():
+		# Pale and washed out: it is leaving, not fighting.
+		body = Color(0.52, 0.80, 0.70)
+		fin = Color(0.26, 0.44, 0.40)
 	var hull := PackedVector2Array([
 		Vector2(16, 0), Vector2(-8, -8), Vector2(-3, 0), Vector2(-8, 8),
 	])
 	draw_colored_polygon(hull, body)
 	draw_polyline(GameConfig.closed(hull), fin, 2.0, true)
 	draw_circle(Vector2(8, 0), 2.2, Color(0.05, 0.05, 0.07))
-	if hostile:
+	if is_fleeing():
+		# Motion lines off the tail, so it reads as running rather than merely
+		# being a different colour.
+		for i in 2:
+			var x := -12.0 - float(i) * 6.0
+			draw_line(Vector2(x, -4.0), Vector2(x - 7.0, -4.0), fin, 1.6)
+			draw_line(Vector2(x, 4.0), Vector2(x - 7.0, 4.0), fin, 1.6)
+	elif is_hostile():
 		draw_arc(Vector2.ZERO, 20.0, 0.0, TAU, 24, Color(0.95, 0.25, 0.2, 0.35), 2.0, true)
 	elif is_alert():
 		draw_arc(Vector2.ZERO, 20.0, 0.0, TAU, 24, Color(0.95, 0.72, 0.25, 0.30), 1.6, true)
+	_draw_lock_marker(16.0)

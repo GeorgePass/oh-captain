@@ -79,18 +79,29 @@ const WRECK_COINS_MAX := 5
 
 # --- Sight ---
 ## How far the captain can actually see, and therefore how far they can lock on.
-## Plain radial distance, no cone and no line-of-sight test, set to roughly the
-## camera's half-diagonal so it matches what is on screen. Sonar reaches far
-## beyond this; locking deliberately does not.
-const LOCK_VISUAL_RANGE := 440.0
+## Plain radial distance, no cone and no line-of-sight test. Sonar reaches far
+## beyond this; locking deliberately does not, though a sonar contact also
+## qualifies for lock regardless of distance.
+const LOCK_VISUAL_RANGE := 560.0
+## Extra distance past visual range where the lock-on grace window is still
+## being refreshed, so loitering on the boundary does not make a target flicker.
+const LOCK_RELEASE_MARGIN := 120.0
+## How long a lock stays valid after leaving that band. Losing sight should cost
+## you the lock eventually, but not on the frame it happens.
+const LOCK_RELEASE_TIME := 8.0
+## Hard cap, as a multiple of visual range. Past this the grace window cannot
+## hold a lock at all, so a target that is genuinely gone is dropped at once.
+const LOCK_RELEASE_HARD_MULT := 3.0
 
 # --- Sonar ---
 const SONAR_MAX_RANGE := 900.0
 const SONAR_PING_SPEED := 720.0
 ## Gap between pings while the sonar is held on. Also the wait after switching
 ## it off and straight back on: the cooldown is not reset by the toggle.
-const SONAR_COOLDOWN := 3.0
-const SONAR_CONTACT_DURATION := 4.0
+const SONAR_COOLDOWN := 8.0
+## How long a revealed enemy stays on the radar and lockable. Comfortably longer
+## than the ping cooldown, so a continuous sweep does not flicker.
+const SONAR_CONTACT_DURATION := 16.0
 ## How far off the true hull position a ping places an alerted enemy's search.
 ## Without this, searching a pinged area would walk straight to the player.
 const SONAR_PING_SEARCH_SPREAD := 220.0
@@ -124,6 +135,14 @@ const ENEMY_ACCEL := 5.5
 const ENEMY_ALERT_SPEED := 62.0
 ## Radius it sweeps around the last known position before giving up.
 const ENEMY_SEARCH_RADIUS := 90.0
+## An enemy at or below one third of its HP gives up and runs for it.
+const ENEMY_FLEE_HP_DIVISOR := 3
+## Fleeing speed, deliberately below the hull's top speed: a fish that bolts has
+## to stay catchable, or a five HP fish becomes permanently unkillable.
+const ENEMY_FLEE_SPEED := 130.0
+## A nearly-dead fish bolts outright when something dies this close by.
+const ENEMY_FLEE_PANIC_RADIUS := 260.0
+const ENEMY_FLEE_PANIC_HP := 1
 ## How long it keeps searching before reverting to passive.
 const ENEMY_ALERT_TIMEOUT := 7.0
 ## Swimming sounds, as a gap between rustles. This is how a creature you have

@@ -19,6 +19,7 @@ const GROUP := "audio"
 const PASSIVE := 0
 const ALERT := 1
 const HOSTILE := 2
+const FLEEING := 3
 
 const SFX_POOL := 12
 const POSITIONAL_POOL := 20
@@ -183,7 +184,7 @@ func _build_streams() -> void:
 	_streams[&"ambient"] = Sfx.ambient()
 
 	for species in [&"fish", &"crab"]:
-		for state in [PASSIVE, ALERT, HOSTILE]:
+		for state in [PASSIVE, ALERT, HOSTILE, FLEEING]:
 			_streams[blip_key(species, state)] = Sfx.contact_blip(species, state)
 		_streams[cry_key(false, species)] = Sfx.cry_alert(species)
 		_streams[cry_key(true, species)] = Sfx.cry_hostile(species)
