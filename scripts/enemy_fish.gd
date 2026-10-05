@@ -18,6 +18,12 @@ func species() -> StringName:
 	return &"fish"
 
 
+## One torpedo is ten damage against five HP, and a graze off a reef is one, and
+## a fish should not have to be nearly dead to want to be somewhere else.
+func coward() -> bool:
+	return true
+
+
 func _draw() -> void:
 	var body := Color(0.32, 0.52, 0.72)
 	var fin := Color(0.20, 0.32, 0.45)

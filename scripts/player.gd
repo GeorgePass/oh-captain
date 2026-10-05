@@ -24,6 +24,8 @@ var fire_cooldown := 0.0
 
 ## Enemies eligible for lock-on, rebuilt every physics frame, nearest first.
 var _lockable: Array[Node2D] = []
+## Targets Q has already walked through on the current pass.
+var _lock_cycle: Array[Node2D] = []
 
 var _sonar: Sonar
 var _damage_cooldown := 0.0
@@ -95,10 +97,12 @@ func _read_input(delta: float) -> void:
 	elif Input.is_action_pressed("reverse"):
 		velocity -= forward * GameConfig.PLAYER_REVERSE_THRUST * delta
 
-	# Passive drag doubles as engine braking.
-	velocity = velocity.move_toward(Vector2.ZERO, GameConfig.PLAYER_DRAG * 120.0 * delta)
-	if velocity.length() > GameConfig.PLAYER_MAX_SPEED:
-		velocity = velocity.normalized() * GameConfig.PLAYER_MAX_SPEED
+	# Passive drag doubles as engine braking, and it applies whether or not the
+	# screw is turning: a flat deceleration the whole way down, rather than an
+	# exponential tail still trickling along ten seconds after you let go.
+	velocity = velocity.move_toward(Vector2.ZERO, GameConfig.PLAYER_DECEL * delta)
+	# The hull's ceiling, in either direction.
+	velocity = velocity.limit_length(GameConfig.PLAYER_MAX_SPEED)
 
 
 func _resolve_contact_damage() -> void:
@@ -231,27 +235,40 @@ func request_ping() -> void:
 		_sonar.ping()
 
 
-## Q / Lock button: cycles everything in sight by distance. A lone target
-## auto-locks.
+## Q / Lock button: walks the lockable set nearest-first without ever offering
+## the same target twice in one pass, then starts a fresh pass from whoever is
+## closest at that moment. In practice you tap Q and the lock walks outward from
+## the hull, so a whole cluster can be surveyed in a couple of seconds instead of
+## re-reading the same near fish every time.
 func cycle_lock() -> void:
 	var list := lockable()
 	if list.is_empty():
 		clear_lock()
+		_lock_cycle.clear()
 		return
 
-	if list.size() == 1:
-		set_lock(list[0])
-		return
+	# Prune the pass. A target that has died or slipped out of range should not
+	# keep a slot reserved, or the walk stalls waiting on something gone.
+	var walked: Array[Node2D] = []
+	for node in _lock_cycle:
+		if is_instance_valid(node) and list.has(node):
+			walked.append(node)
 
-	var ordered := list.duplicate()
-	ordered.sort_custom(_by_distance)
+	# Whatever has not been offered yet. `list` is already sorted nearest-first.
+	var fresh: Array[Node2D] = []
+	for node in list:
+		if not walked.has(node):
+			fresh.append(node)
 
-	var index := ordered.find(locked_target)
-	if index < 0:
-		# Stale or cleared lock: start at the nearest thing in sight.
-		set_lock(ordered[0])
-	else:
-		set_lock(ordered[(index + 1) % ordered.size()])
+	# Everything lockable has been through: start again from the closest.
+	if fresh.is_empty():
+		walked.clear()
+		fresh = list
+
+	var pick := fresh[0]
+	walked.append(pick)
+	_lock_cycle = walked
+	set_lock(pick)
 
 
 ## Everything eligible for lock-on right now, recomputed once per physics frame

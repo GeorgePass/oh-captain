@@ -108,5 +108,5 @@ func _draw() -> void:
 	draw_arc(center, 11.0, 0.0, TAU, 24, Color(PLAYER_COLOR.r, PLAYER_COLOR.g, PLAYER_COLOR.b, 0.45), 1.0, true)
 
 	range_label.text = "%dm  ·  %d contact%s" % [
-		int(GameConfig.SONAR_MAX_RANGE), contacts.size(), "" if contacts.size() == 1 else "s"
+		roundi(GameConfig.SONAR_MAX_RANGE), contacts.size(), "" if contacts.size() == 1 else "s"
 	]

@@ -21,35 +21,58 @@ const REEF_MASK := 0
 const TORPEDO_MASK := LAYER_ENEMY_BIT | LAYER_REEF_BIT
 
 # --- World ---
-const WORLD_SIZE := 3000.0
+const WORLD_SIZE := 4200.0
 const WORLD_HALF := WORLD_SIZE * 0.5
 
+# --- Pace ---
+## One knob for the tempo of the whole game. Every speed below is a base value
+## times this, so relative speeds are held by construction rather than by
+## remembering to edit twelve numbers together. Turning the game up or down is
+## a single edit.
+const SPEED_SCALE := 0.75
+
 # --- Player ---
-## Deliberately sluggish. Thrust and drag are both small, so the hull takes
-## many seconds to reach speed and coasts for just as long once you let go;
-## turning the nose does not redirect the boat, only the thrust vector.
+## Deliberately sluggish. Accel and braking are expressed as *times* rather than
+## forces: the hull takes PLAYER_ACCEL_TIME seconds to reach top speed from
+## rest and PLAYER_BRAKE_TIME to fall from top speed to nothing. Both are long,
+## and the glide down is longer than the run up, which is most of what makes it
+## read as a submarine rather than a spaceship.
 const PLAYER_MAX_HP := 50
 const PLAYER_MAX_AMMO := 20
-const PLAYER_THRUST := 150.0
-## Astern is far weaker than ahead, as on a real boat with one screw.
-const PLAYER_REVERSE_THRUST := 70.0
-const PLAYER_TURN_RATE := 1.6
-## Multiplied by 120 to get the deceleration in px/s^2 (~42).
-const PLAYER_DRAG := 0.35
-const PLAYER_MAX_SPEED := 150.0
+const PLAYER_MAX_SPEED := 150.0 * SPEED_SCALE
+const PLAYER_ACCEL_TIME := 3.2
+const PLAYER_BRAKE_TIME := 4.4
+## Constant deceleration, so the coast is a straight line rather than an
+## exponential tail that never quite arrives.
+const PLAYER_DECEL := PLAYER_MAX_SPEED / PLAYER_BRAKE_TIME
+## Drag always applies, so thrust is what the screw actually puts out and the
+## difference between the two is what accelerates the hull. Stating the net
+## figure is what makes ACCEL_TIME mean what it says on the tin.
+const PLAYER_ACCEL := PLAYER_MAX_SPEED / PLAYER_ACCEL_TIME
+const PLAYER_THRUST := PLAYER_ACCEL + PLAYER_DECEL
+## Astern is far weaker than ahead, as on a real boat with one screw, so it takes
+## more than twice as long to build way astern as it does to run ahead. The
+## hull's ceiling is the same either way: astern is weaker because the screw is
+## weaker, not because the boat somehow goes faster backwards.
+const PLAYER_REVERSE_FRACTION := 0.47
+const PLAYER_REVERSE_ACCEL := PLAYER_ACCEL * PLAYER_REVERSE_FRACTION
+const PLAYER_REVERSE_THRUST := PLAYER_REVERSE_ACCEL + PLAYER_DECEL
+## Direct steering of the nose only. The hull carries its momentum through a
+## turn; spinning does not redirect it, only the thrust vector does.
+const PLAYER_TURN_RATE := 1.6 * SPEED_SCALE
 const PLAYER_RADIUS := 15.0
 const FIRE_COOLDOWN := 0.45
 ## Speed above which the hull is considered to be sprinting, and can be heard
 ## at roughly twice the normal detection radius. High enough that only a real
 ## run triggers it, so creeping along stays quiet.
-const FAST_SPEED := 110.0
+const FAST_SPEED := 110.0 * SPEED_SCALE
 
 # Contact damage: noticeable, but survivable through several mistakes.
 const REEF_CONTACT_DMG := 14
 const CONTACT_DMG_COOLDOWN := 0.7
 ## Shove applied when something rams the hull, so contact is a hit-and-bump
 ## rather than a grind.
-const CONTACT_KNOCKBACK := 90.0
+const CONTACT_KNOCKBACK := 90.0 * SPEED_SCALE
 
 # --- Audio ---
 ## Everything is synthesised at runtime, so these are the only mix controls.
@@ -82,10 +105,15 @@ const WRECK_COINS_MAX := 5
 ## Plain radial distance, no cone and no line-of-sight test. Sonar reaches far
 ## beyond this; locking deliberately does not, though a sonar contact also
 ## qualifies for lock regardless of distance.
-const LOCK_VISUAL_RANGE := 560.0
+##
+## Scaled with the camera, so "what you can see" and "what you can lock" stay
+## the same thing when the view changes.
+const VIEW_SCALE := 1.333
+const CAMERA_ZOOM := 1.6 / VIEW_SCALE
+const LOCK_VISUAL_RANGE := 560.0 * VIEW_SCALE
 ## Extra distance past visual range where the lock-on grace window is still
 ## being refreshed, so loitering on the boundary does not make a target flicker.
-const LOCK_RELEASE_MARGIN := 120.0
+const LOCK_RELEASE_MARGIN := 120.0 * VIEW_SCALE
 ## How long a lock stays valid after leaving that band. Losing sight should cost
 ## you the lock eventually, but not on the frame it happens.
 const LOCK_RELEASE_TIME := 8.0
@@ -94,8 +122,13 @@ const LOCK_RELEASE_TIME := 8.0
 const LOCK_RELEASE_HARD_MULT := 3.0
 
 # --- Sonar ---
-const SONAR_MAX_RANGE := 900.0
-const SONAR_PING_SPEED := 720.0
+## Reaches at least as far as the eye does, which is why the radar disc is
+## sized off this number: the disk and the range scale together so the mapping
+## from a contact to its dot stays constant.
+const SONAR_MAX_RANGE := 900.0 * VIEW_SCALE
+## Nudged up with the range so a ping still sweeps the whole disk in about a
+## second and a half rather than crawling across it.
+const SONAR_PING_SPEED := 720.0 * 1.1
 ## Gap between pings while the sonar is held on. Also the wait after switching
 ## it off and straight back on: the cooldown is not reset by the toggle.
 const SONAR_COOLDOWN := 8.0
@@ -106,8 +139,8 @@ const SONAR_CONTACT_DURATION := 16.0
 ## Without this, searching a pinged area would walk straight to the player.
 const SONAR_PING_SEARCH_SPREAD := 220.0
 ## Fish this close are picked up by the passive hydrophone set, no ping needed.
-const SONAR_PROXIMITY_RADIUS := 180.0
-const SONAR_FAST_ENEMY_SPEED := 150.0
+const SONAR_PROXIMITY_RADIUS := 180.0 * VIEW_SCALE
+const SONAR_FAST_ENEMY_SPEED := 150.0 * SPEED_SCALE
 const SONAR_BLIP_MIN := 6.0
 const SONAR_BLIP_MAX := 14.0
 const SONAR_BLIP_DURATION := 1.2
@@ -128,21 +161,22 @@ const FISH_HEARING_BLOCKED_BY_REEF := true
 # --- Enemies ---
 ## Shared AI tuning. Fish and crabs differ in body stats, not behaviour, so the
 ## stealth rules stay legible: every enemy hears the same way.
-const ENEMY_PASSIVE_SPEED := 32.0
-const ENEMY_TURN_RATE := 4.0
+const ENEMY_PASSIVE_SPEED := 32.0 * SPEED_SCALE
+const ENEMY_TURN_RATE := 4.0 * SPEED_SCALE
 const ENEMY_ACCEL := 5.5
 ## An ALERT enemy moves at a purposeful walk, well below a charge.
-const ENEMY_ALERT_SPEED := 62.0
+const ENEMY_ALERT_SPEED := 62.0 * SPEED_SCALE
 ## Radius it sweeps around the last known position before giving up.
-const ENEMY_SEARCH_RADIUS := 90.0
+const ENEMY_SEARCH_RADIUS := 90.0 * VIEW_SCALE
 ## An enemy at or below one third of its HP gives up and runs for it.
 const ENEMY_FLEE_HP_DIVISOR := 3
 ## Fleeing speed, deliberately below the hull's top speed: a fish that bolts has
 ## to stay catchable, or a five HP fish becomes permanently unkillable.
-const ENEMY_FLEE_SPEED := 130.0
-## A nearly-dead fish bolts outright when something dies this close by.
-const ENEMY_FLEE_PANIC_RADIUS := 260.0
-const ENEMY_FLEE_PANIC_HP := 1
+const ENEMY_FLEE_SPEED := 130.0 * SPEED_SCALE
+## Anything cowardly bolts outright when something dies this close by. Bigger
+## than the earshot that hides the hull in the first place, so a kill is heard
+## well before the hull ever is.
+const ENEMY_FLEE_PANIC_RADIUS := 260.0 * VIEW_SCALE
 ## How long it keeps searching before reverting to passive.
 const ENEMY_ALERT_TIMEOUT := 7.0
 ## Swimming sounds, as a gap between rustles. This is how a creature you have
@@ -160,7 +194,7 @@ const ENEMY_AMMO_DROP := 4
 ## Fish: nimble and fragile. Quick to turn on you, dies to one torpedo, but
 ## barely scratches the hull.
 const FISH_MAX_HP := 5
-const FISH_CHARGE_SPEED := 175.0
+const FISH_CHARGE_SPEED := 175.0 * SPEED_SCALE
 const FISH_RADIUS := 13.0
 const FISH_CONTACT_DMG := 4
 const FISH_GOLD_MIN := 2
@@ -169,9 +203,9 @@ const FISH_GOLD_MAX := 5
 ## Crab: armoured and slow. Charges well below the hull's top speed, so it can
 ## always be shaken, but it takes three torpedoes and one hit hurts.
 const CRAB_MAX_HP := 30
-const CRAB_PASSIVE_SPEED := 16.0
-const CRAB_CHARGE_SPEED := 112.0
-const CRAB_TURN_RATE := 2.0
+const CRAB_PASSIVE_SPEED := 16.0 * SPEED_SCALE
+const CRAB_CHARGE_SPEED := 112.0 * SPEED_SCALE
+const CRAB_TURN_RATE := 2.0 * SPEED_SCALE
 const CRAB_ACCEL := 2.2
 const CRAB_RADIUS := 26.0
 const CRAB_CONTACT_DMG := 16
@@ -180,10 +214,10 @@ const CRAB_GOLD_MAX := 20
 
 # --- Torpedo ---
 ## Scaled down with the hull so it still outruns the boat it came from.
-const TORPEDO_SPEED := 330.0
+const TORPEDO_SPEED := 330.0 * SPEED_SCALE
 const TORPEDO_DAMAGE := 10
 const TORPEDO_LIFETIME := 5.0
-const TORPEDO_TURN_RATE := 1.6
+const TORPEDO_TURN_RATE := 1.6 * SPEED_SCALE
 const TORPEDO_SPAWN_OFFSET := 34.0
 const TORPEDO_RADIUS := 5.0
 

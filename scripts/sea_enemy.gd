@@ -113,14 +113,13 @@ func _flee(delta: float) -> void:
 	rotation = lerp_angle(rotation, velocity.angle(), turn_rate * delta)
 
 
-## Called by Main when any enemy dies nearby. A fish already on its last point
-## bolts at the sight of it; anything healthier keeps hunting. This runs before
-## the low-HP check in `take_damage`, so a wounded fish panics at a sibling
-## dying rather than only when hit itself.
+## Called by Main when any enemy dies nearby. A coward bolts at the sight of it
+## regardless of how healthy it is; anything tougher carries on hunting. This is
+## what makes a kill dangerous to make in the wrong place, and it is deliberately
+## not tied to HP: there is no damage small enough to be survivable and still
+## leave a fish willing to stand its ground.
 func on_neighbour_died(at: Vector2) -> void:
-	if state == State.FLEEING:
-		return
-	if hp != GameConfig.ENEMY_FLEE_PANIC_HP:
+	if state == State.FLEEING or not coward():
 		return
 	if global_position.distance_to(at) > GameConfig.ENEMY_FLEE_PANIC_RADIUS:
 		return
@@ -326,6 +325,13 @@ func species() -> StringName:
 	return &"fish"
 
 
+## Whether this creature gives up rather than fight it out. Fish are cowards:
+## one hit of any size and they run, and a kill nearby is enough on its own.
+## The armoured things have to be worn down before they break.
+func coward() -> bool:
+	return false
+
+
 # --- Lock marker -------------------------------------------------------------
 
 ## Drawn by each species at the end of its own `_draw`, so the markers sit on
@@ -352,15 +358,20 @@ func take_damage(amount: int) -> void:
 		return
 	hp -= amount
 	hp_changed.emit(hp, max_hp)
-	# Taking a hit always gives away where the attacker is.
-	set_hostile()
-	# Enough damage to break it, and it stops fighting before it finishes dying.
-	if hp > 0 and hp <= max_hp / GameConfig.ENEMY_FLEE_HP_DIVISOR:
-		set_fleeing()
 	if hp <= 0:
 		_drop_loot()
 		died.emit(self)
 		queue_free()
+		return
+
+	# Hurt and still breathing: a coward abandons the fight outright, anything
+	# else turns on whoever did it. Checked before `set_hostile` so a fish that
+	# is about to run does not also shriek a hunting cry it never means.
+	if coward() or hp <= max_hp / GameConfig.ENEMY_FLEE_HP_DIVISOR:
+		set_fleeing()
+		return
+	# Taking a hit always gives away where the attacker is.
+	set_hostile()
 
 
 ## Scatters coins and, sometimes, a torpedo crate where the enemy died.

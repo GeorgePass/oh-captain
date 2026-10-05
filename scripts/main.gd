@@ -3,10 +3,13 @@ extends Node2D
 
 const WORLD_SEED := 20260905
 
-const REEF_COUNT := 42
-const WRECK_COUNT := 16
-const FISH_COUNT := 14
-const CRAB_COUNT := 4
+## Terrain scales with the water rather than against it. The fish do not: a
+## bigger map with the same number of them is the point, and thinning them out
+## is what makes room to actually navigate instead of being surrounded on spawn.
+const REEF_COUNT := 58
+const WRECK_COUNT := 22
+const FISH_COUNT := 9
+const CRAB_COUNT := 3
 
 ## Fish spawn on a ring outside the viewport so they never appear on top of
 ## the player at start.
