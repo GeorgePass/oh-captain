@@ -29,13 +29,16 @@ func hide_screen() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if not visible or not event.is_pressed() or event.is_echo():
 		return
+	# Both handlers tear the scene down, and this node lives inside the scene
+	# being torn down. Consume the event first: get_viewport() returns null
+	# afterwards, because there is no longer a viewport for this node to ask.
 	# ui_accept is bound to Enter and Space by default.
 	if event.is_action_pressed("ui_accept"):
+		get_viewport().set_input_as_handled()
 		_on_restart()
-		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("ui_cancel"):
-		_on_quit()
 		get_viewport().set_input_as_handled()
+		_on_quit()
 
 
 func _on_restart() -> void:
