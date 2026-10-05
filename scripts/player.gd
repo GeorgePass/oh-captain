@@ -50,6 +50,7 @@ func _physics_process(delta: float) -> void:
 	if _damage_cooldown > 0.0:
 		_damage_cooldown = maxf(_damage_cooldown - delta, 0.0)
 
+	_validate_lock()
 	_read_input(delta)
 	move_and_slide()
 	_resolve_contact_damage()
@@ -158,8 +159,12 @@ func fire() -> Torpedo:
 	var torpedo := _spawn_torpedo()
 	if torpedo == null:
 		return null
-	# Capture the lock at launch so the torpedo commits to that target.
-	torpedo.target = locked_target
+	# Capture the lock at launch so the torpedo commits to that target. The
+	# target may have been freed since the lock was taken (killed by an earlier
+	# torpedo, say), and assigning a freed object to a typed property is a hard
+	# error, so re-check validity here rather than trusting the lock.
+	if is_instance_valid(locked_target):
+		torpedo.target = locked_target
 	torpedo.launch(global_position + direction * GameConfig.TORPEDO_SPAWN_OFFSET, direction)
 
 	# Only bill the shot once it actually exists.
@@ -228,6 +233,14 @@ func set_lock(target: Node2D) -> void:
 
 func clear_lock() -> void:
 	set_lock(null)
+
+
+## Drops the lock if its target has been freed. A fish killed by a torpedo is
+## removed from the tree, but it stays in the sonar contact list until that
+## entry decays, so the lock can outlive the thing it points at.
+func _validate_lock() -> void:
+	if locked_target != null and not is_instance_valid(locked_target):
+		clear_lock()
 
 
 func _by_distance(a: Node2D, b: Node2D) -> bool:

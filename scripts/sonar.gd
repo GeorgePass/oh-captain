@@ -46,7 +46,7 @@ func _process(delta: float) -> void:
 	_passive_scan(delta)
 
 
-func _passive_scan(delta: float) -> void:
+func _passive_scan(_delta: float) -> void:
 	var player := get_parent() as Node2D
 	if player == null:
 		return
@@ -62,10 +62,13 @@ func _passive_scan(delta: float) -> void:
 		elif fish.velocity.length() > GameConfig.SONAR_FAST_ENEMY_SPEED:
 			reveal(fish, GameConfig.SONAR_CONTACT_DURATION * 0.5)
 
-		# Occasional unprompted blip, so idling is never fully safe.
-		if not _blip_at.has(fish) or now >= float(_blip_at[fish]):
-			_blip_at[fish] = now + _rng.randf_range(GameConfig.SONAR_BLIP_MIN, GameConfig.SONAR_BLIP_MAX)
-			reveal(fish, GameConfig.SONAR_BLIP_DURATION)
+		# Occasional unprompted blip, so idling is never fully safe. Only for
+		# fish already within hydrophone range, otherwise every fish in the
+		# world ticks a contact off on its own timer.
+		if dist <= GameConfig.SONAR_MAX_RANGE:
+			if not _blip_at.has(fish) or now >= float(_blip_at[fish]):
+				_blip_at[fish] = now + _rng.randf_range(GameConfig.SONAR_BLIP_MIN, GameConfig.SONAR_BLIP_MAX)
+				reveal(fish, GameConfig.SONAR_BLIP_DURATION)
 
 
 func toggle() -> void:

@@ -41,6 +41,7 @@ func _draw() -> void:
 	if player == null or not is_instance_valid(player):
 		return
 
+	# `scale` is a Control property; shadowing it raises a warning.
 	var scale := radius / GameConfig.SONAR_MAX_RANGE
 	var contacts := player.contacts()
 	var locked := player.locked_target
