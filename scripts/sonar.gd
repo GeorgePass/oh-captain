@@ -88,6 +88,9 @@ func ping() -> bool:
 	mode = Mode.ACTIVE
 	mode_changed.emit(mode)
 
+	# Your own ping, heard from the hull, so it is not panned or attenuated.
+	AudioDirector.play(get_tree(), &"ping", GameConfig.VOL_PING)
+
 	_ping_origin = global_position
 	var ring := _build_ring()
 	if ring == null:
@@ -145,8 +148,28 @@ func reveal(fish: Node2D, duration: float) -> void:
 	var current: float = contacts.get(fish, 0.0)
 	if duration <= current:
 		return
+	# A blip fires only on *new* acquisition. _passive_scan calls this every
+	# frame for anything inside hydrophone range, so blipping per call would
+	# machine-gun the speaker at 60Hz.
+	if current <= 0.0:
+		_play_blip(fish)
 	contacts[fish] = duration
 	contacts_changed.emit(contacts.size())
+
+
+## One blip per acquisition, pitched to species and state so a contact you
+## cannot see is still identifiable by ear.
+func _play_blip(enemy: Node2D) -> void:
+	var director := AudioDirector._find(get_tree())
+	if director == null:
+		return
+	var state_id := AudioDirector.PASSIVE
+	var species := &"fish"
+	if enemy is SeaEnemy:
+		state_id = (enemy as SeaEnemy).state
+		species = (enemy as SeaEnemy).species()
+	AudioDirector.play_at(get_tree(), AudioDirector.blip_key(species, state_id),
+		enemy.global_position, GameConfig.VOL_BLIP)
 
 
 func drop(fish: Node2D) -> void:

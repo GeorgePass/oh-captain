@@ -78,8 +78,10 @@ func _physics_process(delta: float) -> void:
 func _collect(player: Player) -> void:
 	if kind == Kind.AMMO:
 		player.add_ammo(amount)
+		AudioDirector.play_at(get_tree(), &"ammo", global_position, GameConfig.VOL_GOLD)
 	else:
 		player.add_gold(amount)
+		AudioDirector.play_at(get_tree(), &"gold", global_position, GameConfig.VOL_GOLD)
 	queue_free()
 
 

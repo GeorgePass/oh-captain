@@ -141,4 +141,5 @@ func _on_player_died(_player: Node2D) -> void:
 		if is_instance_valid(enemy):
 			(enemy as SeaEnemy).set_passive()
 	game_over.show_summary(player.gold)
+	AudioDirector.play(get_tree(), &"game_over")
 	get_tree().paused = true

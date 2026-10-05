@@ -13,7 +13,6 @@ func _ready() -> void:
 	visible = false
 	restart_button.pressed.connect(_on_restart)
 	quit_button.pressed.connect(_on_quit)
-	restart_button.grab_focus()
 
 
 ## Shown with the run's final tally. Restart also takes Enter, quit takes Esc,
@@ -21,7 +20,6 @@ func _ready() -> void:
 func show_summary(gold: int) -> void:
 	summary.text = "Salvage recovered: %d gold" % gold
 	visible = true
-	restart_button.grab_focus()
 
 
 func hide_screen() -> void:

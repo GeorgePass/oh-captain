@@ -14,6 +14,10 @@ func _init() -> void:
 	gold_max = GameConfig.FISH_GOLD_MAX
 
 
+func species() -> StringName:
+	return &"fish"
+
+
 func _draw() -> void:
 	var hostile := is_hostile()
 	var body := Color(0.85, 0.25, 0.22) if hostile else Color(0.32, 0.52, 0.72)

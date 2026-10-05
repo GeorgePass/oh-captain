@@ -129,6 +129,8 @@ func take_damage(amount: int) -> void:
 	hp = maxi(hp - amount, 0)
 	hp_changed.emit(hp, max_hp)
 	_flash(Color(1.7, 0.55, 0.5))
+	# Non-positional: this is the hull being hit, so it comes from the hull.
+	AudioDirector.play(get_tree(), &"damage", GameConfig.VOL_DAMAGE)
 	if hp <= 0:
 		died.emit(self)
 

@@ -1,10 +1,11 @@
-[gd_scene load_steps=9 format=3]
+[gd_scene load_steps=10 format=3]
 
 [ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
 [ext_resource type="Script" path="res://scripts/hud.gd" id="2_hud"]
 [ext_resource type="Script" path="res://scripts/sonar_display.gd" id="3_display"]
 [ext_resource type="PackedScene" path="res://scenes/player.tscn" id="4_player"]
 [ext_resource type="PackedScene" path="res://scenes/game_over.tscn" id="5_over"]
+[ext_resource type="Script" path="res://scripts/audio_director.gd" id="6_audio"]
 
 [node name="Main" type="Node2D"]
 script = ExtResource("1_main")
@@ -48,7 +49,7 @@ text = "TORPEDOES  20 / 20"
 text = "SALVAGE  0"
 
 [node name="Hint" type="Label" parent="HUD/Vitals"]
-text = "W/S thrust   A/D turn   Tab sonar   Q lock   E fire"
+text = "W/S thrust   A/D turn   Tab sonar   Q lock   E fire   M mute"
 modulate = Color(1, 1, 1, 0.55)
 
 [node name="SonarDisplay" type="Control" parent="HUD"]
@@ -77,6 +78,9 @@ mouse_filter = 2
 text = "900m"
 horizontal_alignment = 1
 modulate = Color(0.6, 0.95, 0.9, 0.8)
+
+[node name="AudioDirector" type="Node" parent="."]
+script = ExtResource("6_audio")
 
 [node name="GameOver" parent="." instance=ExtResource("5_over")]
 

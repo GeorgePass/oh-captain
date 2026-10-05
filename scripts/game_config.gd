@@ -51,6 +51,18 @@ const CONTACT_DMG_COOLDOWN := 0.7
 ## rather than a grind.
 const CONTACT_KNOCKBACK := 90.0
 
+# --- Audio ---
+## Everything is synthesised at runtime, so these are the only mix controls.
+## Individually trimmed on top of VOL_SFX, before bus volume.
+const VOL_SFX := -4.0
+const VOL_AMBIENCE := -20.0
+const VOL_PING := -5.0
+const VOL_BLIP := -13.0
+const VOL_TORPEDO := -6.0
+const VOL_ENEMY := -11.0
+const VOL_DAMAGE := -4.0
+const VOL_GOLD := -10.0
+
 # --- Gold ---
 ## Coins drift toward the hull inside this radius, and are taken on contact.
 const PICKUP_MAGNET_RADIUS := 130.0
@@ -105,6 +117,12 @@ const ENEMY_ALERT_SPEED := 62.0
 const ENEMY_SEARCH_RADIUS := 90.0
 ## How long it keeps searching before reverting to passive.
 const ENEMY_ALERT_TIMEOUT := 7.0
+## Swimming sounds, as a gap between rustles. This is how a creature you have
+## not pinged can still give itself away.
+const ENEMY_SWIM_MIN_GAP := 2.5
+const ENEMY_SWIM_MAX_GAP := 6.5
+## How far out a swimming sound is worth playing, as a multiple of earshot.
+const ENEMY_SWIM_AUDIBLE_MULT := 2.2
 ## Gold and torpedoes dropped by a killed enemy.
 const ENEMY_GOLD_MIN := 2
 const ENEMY_GOLD_MAX := 6

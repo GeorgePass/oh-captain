@@ -41,6 +41,10 @@ var _last_known := Vector2.ZERO
 var _search_timer := 0.0
 ## Random phase so a group of alerted enemies does not sweep in lockstep.
 var _sweep_seed := 0.0
+## Counts down to the next swimming sound. This is deliberately the only way to
+## sense a passive enemy, and it is a fair trade: it works without a ping, but
+## only if you are already close enough to hear it.
+var _swim_timer := 0.0
 
 
 func _ready() -> void:
@@ -52,6 +56,7 @@ func _ready() -> void:
 	z_index = 0
 	_wander_dir = Vector2.RIGHT.rotated(randf() * TAU)
 	_sweep_seed = randf() * TAU
+	_swim_timer = randf_range(0.5, GameConfig.ENEMY_SWIM_MAX_GAP)
 	hp_changed.emit(hp, max_hp)
 
 
@@ -66,7 +71,30 @@ func _physics_process(delta: float) -> void:
 			_check_detection(delta)
 	move_and_slide()
 	_wrap_world()
+	_tick_swim(delta)
 	queue_redraw()
+
+
+## Occasional rustle of movement, and the only way to notice a creature that has
+## not reacted to you. Only emitted when the player is within roughly twice
+## earshot: past that the sound is inaudible anyway, so playing it would just
+## fill the pool.
+func _tick_swim(delta: float) -> void:
+	if velocity.length() < passive_speed * 0.5:
+		_swim_timer = randf_range(1.5, GameConfig.ENEMY_SWIM_MAX_GAP)
+		return
+	_swim_timer -= delta
+	if _swim_timer > 0.0:
+		return
+	_swim_timer = randf_range(GameConfig.ENEMY_SWIM_MIN_GAP, GameConfig.ENEMY_SWIM_MAX_GAP)
+
+	var player := get_player()
+	if player == null or not is_instance_valid(player):
+		return
+	var audible := GameConfig.FISH_EARSHOT_RADIUS * GameConfig.ENEMY_SWIM_AUDIBLE_MULT
+	if global_position.distance_to(player.global_position) > audible:
+		return
+	AudioDirector.play_at(get_tree(), &"swim", global_position, GameConfig.VOL_ENEMY)
 
 
 # --- States ------------------------------------------------------------------
@@ -173,6 +201,9 @@ func set_alert(approx_player_pos: Vector2 = Vector2.INF) -> void:
 		_last_known = approx_player_pos
 	_search_timer = GameConfig.ENEMY_ALERT_TIMEOUT
 	state = State.ALERT
+	# A questioning cry, not an attack. Played only on the transition, which
+	# the guard above already returns early for.
+	_cry(false)
 
 
 ## Has actually seen the hull. From here it tracks the player directly.
@@ -182,6 +213,17 @@ func set_hostile() -> void:
 	state = State.HOSTILE
 	if velocity.length() < passive_speed:
 		velocity = _wander_dir * passive_speed
+	_cry(true)
+
+
+## Positional, so a cry off the port bow tells you which way to look. Deliberately
+## the only alert the audio system gives: there is no separate "something is
+## alerted" cue, because the creatures announcing themselves is more in keeping
+## with the rest of the game than a HUD tone.
+func _cry(urgent: bool) -> void:
+	if is_inside_tree():
+		AudioDirector.play_at(get_tree(), AudioDirector.cry_key(urgent, species()),
+			global_position, GameConfig.VOL_ENEMY)
 
 
 func set_passive() -> void:
@@ -196,6 +238,12 @@ func is_alert() -> bool:
 
 func is_hostile() -> bool:
 	return state == State.HOSTILE
+
+
+## Sound key species. Overridden by each subclass so blips and cries can be
+## told apart without asking what class something is.
+func species() -> StringName:
+	return &"fish"
 
 
 # --- Damage ------------------------------------------------------------------

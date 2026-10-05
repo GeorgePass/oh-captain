@@ -26,6 +26,7 @@ func launch(from: Vector2, direction: Vector2) -> void:
 	global_position = from
 	velocity = direction.normalized() * speed
 	rotation = velocity.angle()
+	AudioDirector.play_at(get_tree(), &"torpedo_launch", from, GameConfig.VOL_TORPEDO)
 
 
 func _physics_process(delta: float) -> void:
@@ -47,15 +48,17 @@ func _resolve_hits() -> bool:
 		var collider := get_slide_collision(i).get_collider()
 		if collider is SeaEnemy:
 			(collider as SeaEnemy).take_damage(damage)
-			_impact()
+			# Wet, or a rock hit. Kept clearly different so a blind shot against
+			# a reef is audible as a miss.
+			_impact(&"torpedo_hit_flesh")
 			return true
 		if collider is Reef:
-			_impact()
+			_impact(&"torpedo_hit_reef")
 			return true
 	return false
 
 
-func _impact() -> void:
+func _impact(sound: StringName) -> void:
 	var at := global_position
 	var parent := get_parent()
 	if parent != null:
@@ -63,6 +66,7 @@ func _impact() -> void:
 		blast.global_position = at
 		blast.z_index = 6
 		parent.add_child(blast)
+	AudioDirector.play_at(get_tree(), sound, at, GameConfig.VOL_TORPEDO)
 	queue_free()
 
 
