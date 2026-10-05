@@ -4,6 +4,7 @@ extends CanvasLayer
 @onready var hp_label: Label = $Vitals/HP
 @onready var hp_bar: ProgressBar = $Vitals/HPBar
 @onready var ammo_label: Label = $Vitals/Ammo
+@onready var gold_label: Label = $Vitals/Gold
 @onready var sonar_display: Control = $SonarDisplay
 @onready var sonar_button: Button = $Controls/SonarButton
 @onready var lock_button: Button = $Controls/LockButton
@@ -16,6 +17,7 @@ func bind(target: Player) -> void:
 	player = target
 	player.hp_changed.connect(_on_hp_changed)
 	player.ammo_changed.connect(_on_ammo_changed)
+	player.gold_changed.connect(_on_gold_changed)
 	player.fire_state_changed.connect(_on_fire_state_changed)
 	player.lock_changed.connect(_on_lock_changed)
 
@@ -26,6 +28,7 @@ func bind(target: Player) -> void:
 	sonar_display.player = player
 	_on_hp_changed(player.hp, player.max_hp)
 	_on_ammo_changed(player.ammo, player.max_ammo)
+	_on_gold_changed(player.gold)
 	_refresh_buttons()
 
 
@@ -63,6 +66,10 @@ func _on_hp_changed(hp: int, max_hp: int) -> void:
 
 func _on_ammo_changed(ammo: int, max_ammo: int) -> void:
 	ammo_label.text = "TORPEDOES  %d / %d" % [ammo, max_ammo]
+
+
+func _on_gold_changed(gold: int) -> void:
+	gold_label.text = "SALVAGE  %d" % gold
 
 
 func _on_fire_state_changed() -> void:

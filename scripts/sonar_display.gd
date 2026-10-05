@@ -3,7 +3,12 @@ extends Control
 ## dots, and a ring + bracket on the locked target.
 
 const PLAYER_COLOR := Color(0.95, 0.84, 0.42)
-const CONTACT_COLOR := Color(0.92, 0.26, 0.22)
+## Unknown or merely drifting.
+const CONTACT_COLOR := Color(0.42, 0.72, 0.88)
+## Searching: something was heard, nothing seen.
+const ALERT_COLOR := Color(0.95, 0.72, 0.25)
+## Has the hull in sight.
+const HOSTILE_COLOR := Color(0.92, 0.26, 0.22)
 const LOCK_COLOR := Color(1.0, 0.86, 0.35)
 const BEAM_COLOR := Color(1.0, 0.86, 0.35, 0.28)
 const RANGE_COLOR := Color(0.30, 0.82, 0.78, 0.85)
@@ -54,7 +59,19 @@ func _draw() -> void:
 		if rel.length() > radius - 5.0:
 			rel = rel.normalized() * (radius - 5.0)
 		var dot := center + rel
-		draw_circle(dot, 4.5, CONTACT_COLOR)
+		# Same three colours the creatures themselves are drawn in, so the
+		# radar state and the world state agree.
+		var tint := CONTACT_COLOR
+		if contact is SeaEnemy:
+			var enemy := contact as SeaEnemy
+			if enemy.is_hostile():
+				tint = HOSTILE_COLOR
+			elif enemy.is_alert():
+				tint = ALERT_COLOR
+			if contact is EnemyCrab:
+				# Crabs get a ring so they read as heavier at a glance.
+				draw_arc(dot, 7.5, 0.0, TAU, 14, tint.darkened(0.2), 1.6, true)
+		draw_circle(dot, 4.5, tint)
 
 		if contact == locked:
 			draw_line(center, dot, BEAM_COLOR, 1.0)

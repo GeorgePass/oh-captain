@@ -7,6 +7,7 @@ const TORPEDO_SCENE := "res://scenes/torpedo.tscn"
 
 signal hp_changed(hp: int, max_hp: int)
 signal ammo_changed(ammo: int, ammo_max: int)
+signal gold_changed(gold: int)
 signal fire_state_changed()
 signal lock_changed(target: Node2D)
 signal died(player: Node2D)
@@ -16,6 +17,8 @@ signal died(player: Node2D)
 
 var hp: int
 var ammo: int
+## Salvage collected. Survives nothing right now: dying ends the run.
+var gold := 0
 var locked_target: Node2D = null
 var fire_cooldown := 0.0
 
@@ -41,6 +44,7 @@ func _ready() -> void:
 		cam.make_current()
 	hp_changed.emit(hp, max_hp)
 	ammo_changed.emit(ammo, max_ammo)
+	gold_changed.emit(gold)
 	queue_redraw()
 
 
@@ -100,8 +104,15 @@ func _resolve_contact_damage() -> void:
 		return
 	for i in get_slide_collision_count():
 		var collider := get_slide_collision(i).get_collider()
-		if collider is EnemyFish:
-			take_damage(GameConfig.ENEMY_CONTACT_DMG)
+		if collider is SeaEnemy:
+			# Each species carries its own contact damage, so a crab hit hurts
+			# far more than a fish brushing past.
+			var enemy := collider as SeaEnemy
+			take_damage(enemy.contact_damage)
+			# Knocked back a little, so a committed enemy cannot grind the hull
+			# down by riding it.
+			velocity = (global_position - enemy.global_position).normalized() \
+				* GameConfig.CONTACT_KNOCKBACK + velocity * 0.3
 			_damage_cooldown = GameConfig.CONTACT_DMG_COOLDOWN
 			return
 		if collider is Reef:
@@ -150,6 +161,22 @@ func sonar() -> Sonar:
 
 func can_fire() -> bool:
 	return hp > 0 and ammo > 0 and fire_cooldown <= 0.0
+
+
+func add_gold(amount: int) -> void:
+	if amount <= 0 or hp <= 0:
+		return
+	gold += amount
+	gold_changed.emit(gold)
+
+
+## Clamped to max_ammo, so a crate cannot push the player over the cap.
+func add_ammo(amount: int) -> void:
+	if amount <= 0 or hp <= 0:
+		return
+	ammo = mini(ammo + amount, max_ammo)
+	ammo_changed.emit(ammo, max_ammo)
+	fire_state_changed.emit()
 
 
 func fire() -> Torpedo:

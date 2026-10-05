@@ -6,6 +6,7 @@ const WORLD_SEED := 20260905
 const REEF_COUNT := 42
 const WRECK_COUNT := 16
 const FISH_COUNT := 14
+const CRAB_COUNT := 4
 
 ## Fish spawn on a ring outside the viewport so they never appear on top of
 ## the player at start.
@@ -15,7 +16,10 @@ const FISH_SPAWN_MARGIN := 160.0
 @onready var reefs: Node2D = $World/Reefs
 @onready var wrecks: Node2D = $World/Wrecks
 @onready var fish_container: Node2D = $World/Fish
+@onready var crab_container: Node2D = $World/Crabs
+@onready var pickup_container: Node2D = $World/Pickups
 @onready var hud: CanvasLayer = $HUD
+@onready var game_over: CanvasLayer = $GameOver
 
 var _rng := RandomNumberGenerator.new()
 
@@ -25,8 +29,10 @@ func _ready() -> void:
 	_spawn_reefs()
 	_spawn_wrecks()
 	_spawn_fish()
+	_spawn_crabs()
 	player.died.connect(_on_player_died)
 	hud.bind(player)
+	game_over.hide_screen()
 
 
 func _spawn_reefs() -> void:
@@ -39,6 +45,8 @@ func _spawn_reefs() -> void:
 		reefs.add_child(reef)
 
 
+## Wrecks are also loot sites. Coins are scattered around the hull of each
+## wreck that holds any, so drifting into one is the main reason to slow down.
 func _spawn_wrecks() -> void:
 	for i in WRECK_COUNT:
 		var wreck := Wreck.new()
@@ -48,6 +56,27 @@ func _spawn_wrecks() -> void:
 		wreck.position = _random_world_point()
 		wreck.rotation = _rng.randf_range(0.0, TAU)
 		wrecks.add_child(wreck)
+		_scatter_wreck_loot(wreck)
+
+
+func _scatter_wreck_loot(wreck: Wreck) -> void:
+	if _rng.randf() > GameConfig.WRECK_GOLD_CHANCE:
+		return
+	var total := _rng.randi_range(GameConfig.WRECK_GOLD_MIN, GameConfig.WRECK_GOLD_MAX)
+	var coins := _rng.randi_range(GameConfig.WRECK_COINS_MIN, GameConfig.WRECK_COINS_MAX)
+	coins = mini(coins, total)
+	var per_coin := maxi(1, total / coins)
+	var spread := wreck.length * 0.7
+	for i in coins:
+		var coin := Pickup.spawn(pickup_container, wreck.position + Vector2(
+			_rng.randf_range(-spread, spread),
+			_rng.randf_range(-spread * 0.6, spread * 0.6)))
+		if coin == null:
+			continue
+		coin.amount = per_coin
+		# Nudged along the wreck's own axis so the coins read as spilled from
+		# it rather than sprinkled in a circle.
+		coin.nudge(Vector2.from_angle(wreck.rotation) * _rng.randf_range(-30.0, 30.0))
 
 
 func _spawn_fish() -> void:
@@ -59,6 +88,19 @@ func _spawn_fish() -> void:
 		var fish := scene.instantiate() as EnemyFish
 		fish.position = _offscreen_point()
 		fish_container.add_child(fish)
+
+
+## Crabs spawn off-screen too, but with a wider margin so a slow one cannot
+## trundle into view on its own during the opening seconds.
+func _spawn_crabs() -> void:
+	var scene := load("res://scenes/crab.tscn") as PackedScene
+	if scene == null:
+		push_error("Main: could not load res://scenes/crab.tscn")
+		return
+	for i in CRAB_COUNT:
+		var crab := scene.instantiate() as EnemyCrab
+		crab.position = _offscreen_point()
+		crab_container.add_child(crab)
 
 
 func _random_world_point() -> Vector2:
@@ -90,6 +132,13 @@ func _visible_half_diagonal() -> float:
 	return Vector2(viewport.x / zoom.x, viewport.y / zoom.y).length() * 0.5
 
 
+## Runs are terminal: the hull stops acting on input, the tree pauses so
+## nothing keeps hunting in the background, and the end screen offers a fresh
+## dive or a quit.
 func _on_player_died(_player: Node2D) -> void:
-	# v1 has no game-over flow; just stop the hull acting on input.
 	player.set_physics_process(false)
+	for enemy in get_tree().get_nodes_in_group(SeaEnemy.GROUP):
+		if is_instance_valid(enemy):
+			(enemy as SeaEnemy).set_passive()
+	game_over.show_summary(player.gold)
+	get_tree().paused = true

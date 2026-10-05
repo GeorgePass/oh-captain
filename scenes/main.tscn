@@ -1,9 +1,10 @@
-[gd_scene load_steps=6 format=3]
+[gd_scene load_steps=9 format=3]
 
 [ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
 [ext_resource type="Script" path="res://scripts/hud.gd" id="2_hud"]
 [ext_resource type="Script" path="res://scripts/sonar_display.gd" id="3_display"]
 [ext_resource type="PackedScene" path="res://scenes/player.tscn" id="4_player"]
+[ext_resource type="PackedScene" path="res://scenes/game_over.tscn" id="5_over"]
 
 [node name="Main" type="Node2D"]
 script = ExtResource("1_main")
@@ -17,6 +18,10 @@ script = ExtResource("1_main")
 [node name="Wrecks" type="Node2D" parent="World"]
 
 [node name="Fish" type="Node2D" parent="World"]
+
+[node name="Crabs" type="Node2D" parent="World"]
+
+[node name="Pickups" type="Node2D" parent="World" groups=["pickups"]]
 
 [node name="HUD" type="CanvasLayer" parent="."]
 script = ExtResource("2_hud")
@@ -38,6 +43,9 @@ show_percentage = false
 
 [node name="Ammo" type="Label" parent="HUD/Vitals"]
 text = "TORPEDOES  20 / 20"
+
+[node name="Gold" type="Label" parent="HUD/Vitals"]
+text = "SALVAGE  0"
 
 [node name="Hint" type="Label" parent="HUD/Vitals"]
 text = "W/S thrust   A/D turn   Tab sonar   Q lock   E fire"
@@ -69,6 +77,8 @@ mouse_filter = 2
 text = "900m"
 horizontal_alignment = 1
 modulate = Color(0.6, 0.95, 0.9, 0.8)
+
+[node name="GameOver" parent="." instance=ExtResource("5_over")]
 
 [node name="Controls" type="HBoxContainer" parent="HUD"]
 anchors_preset = 7

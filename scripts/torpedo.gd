@@ -45,8 +45,8 @@ func _physics_process(delta: float) -> void:
 func _resolve_hits() -> bool:
 	for i in get_slide_collision_count():
 		var collider := get_slide_collision(i).get_collider()
-		if collider is EnemyFish:
-			(collider as EnemyFish).take_damage(damage)
+		if collider is SeaEnemy:
+			(collider as SeaEnemy).take_damage(damage)
 			_impact()
 			return true
 		if collider is Reef:

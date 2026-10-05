@@ -51,24 +51,24 @@ func _passive_scan(_delta: float) -> void:
 	if player == null:
 		return
 	var now := float(Time.get_ticks_msec()) / 1000.0
-	for node in get_tree().get_nodes_in_group(EnemyFish.GROUP):
-		var fish := node as Node2D
-		if fish == null or not is_instance_valid(fish):
+	for node in get_tree().get_nodes_in_group(SeaEnemy.GROUP):
+		var enemy := node as Node2D
+		if enemy == null or not is_instance_valid(enemy):
 			_blip_at.erase(node)
 			continue
-		var dist := player.global_position.distance_to(fish.global_position)
+		var dist := player.global_position.distance_to(enemy.global_position)
 		if dist <= GameConfig.SONAR_PROXIMITY_RADIUS:
-			reveal(fish, GameConfig.SONAR_CONTACT_DURATION)
-		elif fish.velocity.length() > GameConfig.SONAR_FAST_ENEMY_SPEED:
-			reveal(fish, GameConfig.SONAR_CONTACT_DURATION * 0.5)
+			reveal(enemy, GameConfig.SONAR_CONTACT_DURATION)
+		elif enemy.velocity.length() > GameConfig.SONAR_FAST_ENEMY_SPEED:
+			reveal(enemy, GameConfig.SONAR_CONTACT_DURATION * 0.5)
 
 		# Occasional unprompted blip, so idling is never fully safe. Only for
 		# fish already within hydrophone range, otherwise every fish in the
 		# world ticks a contact off on its own timer.
 		if dist <= GameConfig.SONAR_MAX_RANGE:
-			if not _blip_at.has(fish) or now >= float(_blip_at[fish]):
-				_blip_at[fish] = now + _rng.randf_range(GameConfig.SONAR_BLIP_MIN, GameConfig.SONAR_BLIP_MAX)
-				reveal(fish, GameConfig.SONAR_BLIP_DURATION)
+			if not _blip_at.has(enemy) or now >= float(_blip_at[enemy]):
+				_blip_at[enemy] = now + _rng.randf_range(GameConfig.SONAR_BLIP_MIN, GameConfig.SONAR_BLIP_MAX)
+				reveal(enemy, GameConfig.SONAR_BLIP_DURATION)
 
 
 func toggle() -> void:
@@ -112,15 +112,21 @@ func _build_ring() -> SonarRing:
 	return bare
 
 
-func _on_ring_reached(fish: Node2D) -> void:
-	if fish == null or not is_instance_valid(fish):
+## A ping gives the enemy a bearing, not a target. Fish and crabs are only
+## ever put on ALERT here, and the player position passed in is the ring's
+## origin rather than where they actually are, so searching a pinged area
+## does not walk straight to the hull.
+func _on_ring_reached(enemy: Node2D) -> void:
+	if enemy == null or not is_instance_valid(enemy):
 		return
-	# Reefs occlude the ping: a reef between player and fish hides the contact.
-	if _blocked_by_reef(_ping_origin, fish.global_position):
+	# Reefs occlude the ping: a reef between player and enemy hides the contact.
+	if _blocked_by_reef(_ping_origin, enemy.global_position):
 		return
-	reveal(fish, GameConfig.SONAR_CONTACT_DURATION)
-	if fish.has_method(&"set_hostile"):
-		fish.call(&"set_hostile")
+	reveal(enemy, GameConfig.SONAR_CONTACT_DURATION)
+	if enemy.has_method(&"set_alert"):
+		# Jitter the fix so an alerted search converges on the area, not the hull.
+		var spread := Vector2.from_angle(randf() * TAU) * GameConfig.SONAR_PING_SEARCH_SPREAD
+		enemy.call(&"set_alert", _ping_origin + spread)
 
 
 func _blocked_by_reef(from: Vector2, to: Vector2) -> bool:

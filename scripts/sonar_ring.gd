@@ -43,14 +43,14 @@ func _physics_process(delta: float) -> void:
 
 ## Emits `reached` for every fish the expanding edge swept past this frame.
 func _scan(prev: float, now: float) -> void:
-	for node in get_tree().get_nodes_in_group(EnemyFish.GROUP):
-		var fish := node as Node2D
-		if fish == null or not is_instance_valid(fish):
+	for node in get_tree().get_nodes_in_group(SeaEnemy.GROUP):
+		var enemy := node as Node2D
+		if enemy == null or not is_instance_valid(enemy):
 			continue
-		var d := origin.distance_to(fish.global_position)
+		var d := origin.distance_to(enemy.global_position)
 		# Only fire on the frame the edge crosses this distance.
 		if d > prev and d <= now:
-			reached.emit(fish)
+			reached.emit(enemy)
 
 
 func _sync_shape() -> void:

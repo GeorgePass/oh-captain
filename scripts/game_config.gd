@@ -46,14 +46,33 @@ const FAST_SPEED := 110.0
 
 # Contact damage: noticeable, but survivable through several mistakes.
 const REEF_CONTACT_DMG := 14
-const ENEMY_CONTACT_DMG := 9
 const CONTACT_DMG_COOLDOWN := 0.7
+## Shove applied when something rams the hull, so contact is a hit-and-bump
+## rather than a grind.
+const CONTACT_KNOCKBACK := 90.0
+
+# --- Gold ---
+## Coins drift toward the hull inside this radius, and are taken on contact.
+const PICKUP_MAGNET_RADIUS := 130.0
+const PICKUP_MAGNET_ACCEL := 900.0
+const PICKUP_COLLECT_RADIUS := 26.0
+const PICKUP_DRAG := 3.0
+## Gold carried by a wreck, spread across a few coins.
+const WRECK_GOLD_MIN := 6
+const WRECK_GOLD_MAX := 22
+## Chance a wreck holds any gold at all.
+const WRECK_GOLD_CHANCE := 0.65
+const WRECK_COINS_MIN := 2
+const WRECK_COINS_MAX := 5
 
 # --- Sonar ---
 const SONAR_MAX_RANGE := 900.0
 const SONAR_PING_SPEED := 720.0
 const SONAR_COOLDOWN := 3.0
 const SONAR_CONTACT_DURATION := 4.0
+## How far off the true hull position a ping places an alerted enemy's search.
+## Without this, searching a pinged area would walk straight to the player.
+const SONAR_PING_SEARCH_SPREAD := 220.0
 ## Fish this close are picked up by the passive hydrophone set, no ping needed.
 const SONAR_PROXIMITY_RADIUS := 180.0
 const SONAR_FAST_ENEMY_SPEED := 150.0
@@ -74,16 +93,44 @@ const FISH_ALERT_DELAY := 0.9
 ## Reefs block sound as well as sight: a fish will not hear you through one.
 const FISH_HEARING_BLOCKED_BY_REEF := true
 
-# --- Fish ---
-## Fish are nimbler than the hull: they accelerate and stop harder, but their
-## top speed stays under PLAYER_MAX_SPEED, so you can always outrun one.
+# --- Enemies ---
+## Shared AI tuning. Fish and crabs differ in body stats, not behaviour, so the
+## stealth rules stay legible: every enemy hears the same way.
+const ENEMY_PASSIVE_SPEED := 32.0
+const ENEMY_TURN_RATE := 4.0
+const ENEMY_ACCEL := 5.5
+## An ALERT enemy moves at a purposeful walk, well below a charge.
+const ENEMY_ALERT_SPEED := 62.0
+## Radius it sweeps around the last known position before giving up.
+const ENEMY_SEARCH_RADIUS := 90.0
+## How long it keeps searching before reverting to passive.
+const ENEMY_ALERT_TIMEOUT := 7.0
+## Gold and torpedoes dropped by a killed enemy.
+const ENEMY_GOLD_MIN := 2
+const ENEMY_GOLD_MAX := 6
+const ENEMY_AMMO_CHANCE := 0.35
+const ENEMY_AMMO_DROP := 4
+
+## Fish: nimble and fragile. Quick to turn on you, dies to one torpedo, but
+## barely scratches the hull.
 const FISH_MAX_HP := 5
-const FISH_PASSIVE_SPEED := 32.0
 const FISH_CHARGE_SPEED := 175.0
-const FISH_TURN_RATE := 4.0
-## Higher than the player's response rate, per the brief.
-const FISH_ACCEL := 5.5
 const FISH_RADIUS := 13.0
+const FISH_CONTACT_DMG := 4
+const FISH_GOLD_MIN := 2
+const FISH_GOLD_MAX := 5
+
+## Crab: armoured and slow. Charges well below the hull's top speed, so it can
+## always be shaken, but it takes three torpedoes and one hit hurts.
+const CRAB_MAX_HP := 30
+const CRAB_PASSIVE_SPEED := 16.0
+const CRAB_CHARGE_SPEED := 112.0
+const CRAB_TURN_RATE := 2.0
+const CRAB_ACCEL := 2.2
+const CRAB_RADIUS := 26.0
+const CRAB_CONTACT_DMG := 16
+const CRAB_GOLD_MIN := 12
+const CRAB_GOLD_MAX := 20
 
 # --- Torpedo ---
 ## Scaled down with the hull so it still outruns the boat it came from.
