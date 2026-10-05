@@ -25,21 +25,24 @@ const WORLD_SIZE := 3000.0
 const WORLD_HALF := WORLD_SIZE * 0.5
 
 # --- Player ---
-## Heavy boat feel: low thrust and low drag, so it takes real distance to get
-## up to speed and even longer to coast to a stop.
+## Deliberately sluggish. Thrust and drag are both small, so the hull takes
+## many seconds to reach speed and coasts for just as long once you let go;
+## turning the nose does not redirect the boat, only the thrust vector.
 const PLAYER_MAX_HP := 50
 const PLAYER_MAX_AMMO := 20
-const PLAYER_THRUST := 250.0
-const PLAYER_REVERSE_THRUST := 150.0
-const PLAYER_TURN_RATE := 2.4
-## Multiplied by 120 to get the deceleration in px/s^2 (~108).
-const PLAYER_DRAG := 0.9
-const PLAYER_MAX_SPEED := 230.0
+const PLAYER_THRUST := 150.0
+## Astern is far weaker than ahead, as on a real boat with one screw.
+const PLAYER_REVERSE_THRUST := 70.0
+const PLAYER_TURN_RATE := 1.6
+## Multiplied by 120 to get the deceleration in px/s^2 (~42).
+const PLAYER_DRAG := 0.35
+const PLAYER_MAX_SPEED := 150.0
 const PLAYER_RADIUS := 15.0
 const FIRE_COOLDOWN := 0.45
-## Player speed above which nearby fish get alerted. Deliberately well under
-## PLAYER_MAX_SPEED, so throttling up trades stealth for pace.
-const FAST_SPEED := 140.0
+## Speed above which the hull is considered to be sprinting, and can be heard
+## at roughly twice the normal detection radius. High enough that only a real
+## run triggers it, so creeping along stays quiet.
+const FAST_SPEED := 110.0
 
 # Contact damage: noticeable, but survivable through several mistakes.
 const REEF_CONTACT_DMG := 14
@@ -51,13 +54,25 @@ const SONAR_MAX_RANGE := 900.0
 const SONAR_PING_SPEED := 720.0
 const SONAR_COOLDOWN := 3.0
 const SONAR_CONTACT_DURATION := 4.0
-const SONAR_PROXIMITY_RADIUS := 260.0
+## Fish this close are picked up by the passive hydrophone set, no ping needed.
+const SONAR_PROXIMITY_RADIUS := 180.0
 const SONAR_FAST_ENEMY_SPEED := 150.0
-const SONAR_BLIP_MIN := 4.0
-const SONAR_BLIP_MAX := 9.0
+const SONAR_BLIP_MIN := 6.0
+const SONAR_BLIP_MAX := 14.0
 const SONAR_BLIP_DURATION := 1.2
-## Fish inside this radius always notice the player.
-const SONAR_HOSTILE_RADIUS := 420.0
+
+# --- Stealth ---
+## Earshot. Only fish this close notice the hull at all, and only if nothing
+## solid is in the way.
+const FISH_EARSHOT_RADIUS := 110.0
+## How much further a sprinting hull carries. Sprinting is the tradeoff: pace
+## for concealment.
+const FISH_EARSHOT_SPRINT_MULT := 2.2
+## The hull must stay inside earshot this long before a fish commits. Lets you
+## slip past a patrol if you go quiet, and punishes loitering in the open.
+const FISH_ALERT_DELAY := 0.9
+## Reefs block sound as well as sight: a fish will not hear you through one.
+const FISH_HEARING_BLOCKED_BY_REEF := true
 
 # --- Fish ---
 ## Fish are nimbler than the hull: they accelerate and stop harder, but their

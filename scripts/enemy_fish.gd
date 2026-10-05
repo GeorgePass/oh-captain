@@ -16,6 +16,8 @@ var state: int = State.PASSIVE
 
 var _wander_dir := Vector2.RIGHT
 var _wander_timer := 0.0
+## Seconds this fish has spent hearing the hull without breaking off.
+var _alert_timer := 0.0
 
 
 func _ready() -> void:
@@ -62,19 +64,40 @@ func _chase(delta: float) -> void:
 	rotation = lerp_angle(rotation, velocity.angle(), GameConfig.FISH_TURN_RATE * delta)
 
 
+## Stealth: a fish only hears the hull if it is close, unobstructed, and the
+## player has been loud for a moment. Sprinting roughly doubles earshot, so
+## going fast is the thing that gives you away, not simply existing.
 func _check_detection() -> void:
 	var player := get_player()
 	if player == null:
 		return
 	var dist := global_position.distance_to(player.global_position)
-	# Nearby hull is always noticed.
-	if dist <= GameConfig.SONAR_HOSTILE_RADIUS:
-		set_hostile()
+	var earshot := GameConfig.FISH_EARSHOT_RADIUS
+	if player.velocity.length() >= GameConfig.FAST_SPEED:
+		earshot *= GameConfig.FISH_EARSHOT_SPRINT_MULT
+
+	if dist > earshot:
+		_alert_timer = 0.0
 		return
-	# Thrashing about is noticed from further away. Moving slowly is stealthier.
-	if dist <= GameConfig.SONAR_HOSTILE_RADIUS * 2.0 \
-			and player.velocity.length() >= GameConfig.FAST_SPEED:
+	if GameConfig.FISH_HEARING_BLOCKED_BY_REEF and _muted_by_reef(player.global_position):
+		_alert_timer = 0.0
+		return
+
+	# Linger in the open and the fish works out something is there.
+	_alert_timer += get_physics_process_delta_time()
+	if _alert_timer >= GameConfig.FISH_ALERT_DELAY:
 		set_hostile()
+
+
+## Reefs between the hull and the fish muffle it, same as they block the ping.
+func _muted_by_reef(player_pos: Vector2) -> bool:
+	if global_position.is_equal_approx(player_pos):
+		return false
+	var query := PhysicsRayQueryParameters2D.create(
+		global_position, player_pos, GameConfig.LAYER_REEF_BIT)
+	query.collide_with_areas = false
+	query.collide_with_bodies = true
+	return not get_world_2d().direct_space_state.intersect_ray(query).is_empty()
 
 
 func set_hostile() -> void:
