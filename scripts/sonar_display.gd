@@ -13,6 +13,9 @@ const LOCK_COLOR := Color(1.0, 0.86, 0.35)
 const BEAM_COLOR := Color(1.0, 0.86, 0.35, 0.28)
 const RANGE_COLOR := Color(0.30, 0.82, 0.78, 0.85)
 const BG_COLOR := Color(0.03, 0.11, 0.14, 0.55)
+## Matches the ping's tint in the world, so the radar circle and the one you
+## can see through the hull read as the same event.
+const PING_COLOR := Color(0.35, 0.95, 0.85)
 
 @onready var range_label: Label = $RangeLabel
 
@@ -50,6 +53,20 @@ func _draw() -> void:
 	var scale := radius / GameConfig.SONAR_MAX_RANGE
 	var contacts := player.contacts()
 	var locked := player.locked_target
+
+	# The ping wavefront itself, so the radar shows what is sweeping outward
+	# rather than only where it has already landed. Drawn under the contacts so
+	# a blip is never hidden behind a ring that happens to be passing over it.
+	var sonar := player.sonar()
+	if sonar != null:
+		for ring_radius in sonar.active_ring_radii():
+			if ring_radius <= 1.0:
+				continue
+			var px := minf(ring_radius * scale, radius)
+			draw_arc(center, px, 0.0, TAU, 72, PING_COLOR, 2.0, true)
+			var wash := PING_COLOR
+			wash.a = 0.16
+			draw_arc(center, px * 0.96, 0.0, TAU, 64, wash, 5.0, true)
 
 	for contact in contacts:
 		if not is_instance_valid(contact):

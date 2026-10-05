@@ -41,7 +41,15 @@ func _refresh_buttons() -> void:
 		return
 	var sonar := player.sonar()
 
-	if sonar != null and sonar.cooldown > 0.0:
+	# While continuous pinging is on the button stays live even during the
+	# cooldown, because it is how you turn it back off.
+	if sonar != null and sonar.continuous:
+		if sonar.cooldown > 0.0:
+			sonar_button.text = "Sonar: ON  next %.1fs" % sonar.cooldown
+		else:
+			sonar_button.text = "Sonar: ON  [Tab]"
+		sonar_button.disabled = false
+	elif sonar != null and sonar.cooldown > 0.0:
 		sonar_button.text = "Sonar  %.1fs" % sonar.cooldown
 		sonar_button.disabled = true
 	else:
@@ -49,7 +57,8 @@ func _refresh_buttons() -> void:
 		sonar_button.text = "Sonar: %s  [Tab]" % mode
 		sonar_button.disabled = false
 
-	var count := player.contacts().size()
+	# Lock counts what is in sight, not what the sonar has found.
+	var count := player.lockable().size()
 	lock_button.text = "Lock: %d  [Q]" % count
 	lock_button.disabled = count == 0 or player.locked_target == null
 

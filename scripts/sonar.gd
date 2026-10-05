@@ -2,8 +2,9 @@ class_name Sonar
 extends Node2D
 ## Owns sonar mode, ping cooldowns, and the live contact list.
 ##
-## A "contact" is a revealed fish plus a decaying timer. Contacts feed the HUD
-## radar, the lock-on logic, and the empty-contact cleanup that drops locks.
+## A "contact" is a revealed enemy plus a decaying timer. Contacts feed the HUD
+## radar at long range; locking onto something short of that is the player's
+## own eyes, handled in Player.lockable().
 
 enum Mode { PASSIVE, ACTIVE }
 
@@ -14,9 +15,18 @@ signal contacts_changed(count: int)
 
 var mode: int = Mode.PASSIVE
 var cooldown := 0.0
+## Whether the sonar is pinging on its own. This is the toggle the player flips;
+## `mode` is only what the HUD reports, and is derived from this and from whether
+## a ring happens to be in flight.
+var continuous := false
 
 ## Fish -> remaining contact time. Keyed by node instance.
 var contacts: Dictionary = {}
+
+## Rings currently expanding, so the radar can draw the same circles the world
+## does. More than one is normal: a continuous ping can have the previous ring
+## still travelling when the next one launches.
+var _rings: Array[SonarRing] = []
 
 var _blip_at: Dictionary = {}
 var _ping_origin := Vector2.ZERO
@@ -28,8 +38,16 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	# The cooldown always ticks down, whether or not the sonar is on, so
+	# switching it off and straight back on cannot be used to bypass the wait.
 	if cooldown > 0.0:
 		cooldown = maxf(cooldown - delta, 0.0)
+
+	if continuous and cooldown <= 0.0:
+		ping()
+
+	_prune_rings()
+	_refresh_mode()
 
 	var expired: Array = []
 	for key in contacts.keys():
@@ -71,13 +89,15 @@ func _passive_scan(_delta: float) -> void:
 				reveal(enemy, GameConfig.SONAR_BLIP_DURATION)
 
 
+## Tab / Sonar button. Flips continuous pinging on and off. Releasing the key
+## does nothing: it is a toggle, not a hold.
 func toggle() -> void:
-	# Tab while ACTIVE drops back to passive; Tab while PASSIVE fires a ping.
-	if mode == Mode.ACTIVE:
-		mode = Mode.PASSIVE
-		mode_changed.emit(mode)
-		return
-	ping()
+	continuous = not continuous
+	if continuous:
+		# On cooldown from a previous ping? Then switching back on just waits
+		# out the remainder rather than firing early.
+		ping()
+	_refresh_mode()
 
 
 ## Fires a ping if off cooldown. Returns whether one was actually emitted.
@@ -85,8 +105,6 @@ func ping() -> bool:
 	if cooldown > 0.0:
 		return false
 	cooldown = GameConfig.SONAR_COOLDOWN
-	mode = Mode.ACTIVE
-	mode_changed.emit(mode)
 
 	# Your own ping, heard from the hull, so it is not panned or attenuated.
 	AudioDirector.play(get_tree(), &"ping", GameConfig.VOL_PING)
@@ -97,7 +115,38 @@ func ping() -> bool:
 		return false
 	ring.reached.connect(_on_ring_reached)
 	add_child(ring)
+	_rings.append(ring)
+	_refresh_mode()
 	return true
+
+
+## Radii of every ring in flight, for the radar to draw.
+func active_ring_radii() -> Array[float]:
+	var out: Array[float] = []
+	for ring in _rings:
+		if is_instance_valid(ring):
+			out.append(ring.radius)
+	return out
+
+
+func _prune_rings() -> void:
+	var live: Array[SonarRing] = []
+	for ring in _rings:
+		if is_instance_valid(ring):
+			live.append(ring)
+	_rings = live
+
+
+## ACTIVE while continuous pinging is on or a ring is still travelling, so the
+## button reads honestly whether the player is holding the sonar open or has
+## just been kicked off it by the cooldown.
+func _refresh_mode() -> void:
+	var next := Mode.PASSIVE
+	if continuous or not _rings.is_empty():
+		next = Mode.ACTIVE
+	if next != mode:
+		mode = next
+		mode_changed.emit(mode)
 
 
 func _build_ring() -> SonarRing:

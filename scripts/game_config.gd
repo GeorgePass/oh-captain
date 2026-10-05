@@ -77,9 +77,18 @@ const WRECK_GOLD_CHANCE := 0.65
 const WRECK_COINS_MIN := 2
 const WRECK_COINS_MAX := 5
 
+# --- Sight ---
+## How far the captain can actually see, and therefore how far they can lock on.
+## Plain radial distance, no cone and no line-of-sight test, set to roughly the
+## camera's half-diagonal so it matches what is on screen. Sonar reaches far
+## beyond this; locking deliberately does not.
+const LOCK_VISUAL_RANGE := 440.0
+
 # --- Sonar ---
 const SONAR_MAX_RANGE := 900.0
 const SONAR_PING_SPEED := 720.0
+## Gap between pings while the sonar is held on. Also the wait after switching
+## it off and straight back on: the cooldown is not reset by the toggle.
 const SONAR_COOLDOWN := 3.0
 const SONAR_CONTACT_DURATION := 4.0
 ## How far off the true hull position a ping places an alerted enemy's search.

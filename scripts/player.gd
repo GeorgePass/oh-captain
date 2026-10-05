@@ -35,8 +35,6 @@ func _ready() -> void:
 	motion_mode = CharacterBody2D.MOTION_MODE_FLOATING
 	z_index = 2
 	_sonar = get_node_or_null("Sonar") as Sonar
-	if _sonar != null:
-		_sonar.contacts_changed.connect(_on_contacts_changed)
 	# The camera rides on the hull, so it follows for free and survives the
 	# world-wrap teleport without needing its position corrected.
 	var cam := get_node_or_null("Camera2D") as Camera2D
@@ -225,9 +223,10 @@ func request_ping() -> void:
 		_sonar.ping()
 
 
-## Q / Lock button: cycles contacts by distance. A single contact auto-locks.
+## Q / Lock button: cycles everything in sight by distance. A lone target
+## auto-locks.
 func cycle_lock() -> void:
-	var list := contacts()
+	var list := lockable()
 	if list.is_empty():
 		clear_lock()
 		return
@@ -241,10 +240,25 @@ func cycle_lock() -> void:
 
 	var index := ordered.find(locked_target)
 	if index < 0:
-		# Stale or cleared lock: start at the nearest contact.
+		# Stale or cleared lock: start at the nearest thing in sight.
 		set_lock(ordered[0])
 	else:
 		set_lock(ordered[(index + 1) % ordered.size()])
+
+
+## Everything close enough to see. Deliberately plain distance with no contact
+## required, so you can lock whatever is in front of you without pinging first.
+## Sonar keeps its own much longer-range logic separately.
+func lockable() -> Array[Node2D]:
+	var out: Array[Node2D] = []
+	var reach := GameConfig.LOCK_VISUAL_RANGE
+	for node in get_tree().get_nodes_in_group(SeaEnemy.GROUP):
+		var enemy := node as Node2D
+		if enemy == null or not is_instance_valid(enemy):
+			continue
+		if global_position.distance_squared_to(enemy.global_position) <= reach * reach:
+			out.append(enemy)
+	return out
 
 
 func contacts() -> Array[Node2D]:
@@ -264,30 +278,24 @@ func clear_lock() -> void:
 	set_lock(null)
 
 
-## Drops the lock if its target has been freed. A fish killed by a torpedo is
-## removed from the tree, but it stays in the sonar contact list until that
-## entry decays, so the lock can outlive the thing it points at.
+## Drops the lock if its target has been freed or drifted out of sight. A fish
+## killed by a torpedo is removed from the tree but lingers as a freed object
+## until the end of the frame, and a live one walks out of range in plain
+## sight, so both have to be caught here rather than at the moment of the shot.
 func _validate_lock() -> void:
-	if locked_target != null and not is_instance_valid(locked_target):
+	if locked_target == null:
+		return
+	if not is_instance_valid(locked_target):
+		clear_lock()
+		return
+	if global_position.distance_squared_to(locked_target.global_position) \
+			> GameConfig.LOCK_VISUAL_RANGE * GameConfig.LOCK_VISUAL_RANGE:
 		clear_lock()
 
 
 func _by_distance(a: Node2D, b: Node2D) -> bool:
 	return global_position.distance_squared_to(a.global_position) \
 		< global_position.distance_squared_to(b.global_position)
-
-
-func _on_contacts_changed(_count: int) -> void:
-	# A single contact auto-locks. Anything else keeps whatever lock is held,
-	# and an invalid or no-longer-revealed lock falls away.
-	if locked_target != null and not is_instance_valid(locked_target):
-		clear_lock()
-		return
-	var list := contacts()
-	if list.size() == 1:
-		set_lock(list[0])
-	elif locked_target != null and not list.has(locked_target):
-		clear_lock()
 
 
 func _draw() -> void:
