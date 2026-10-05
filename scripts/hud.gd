@@ -85,7 +85,8 @@ func _on_fire_state_changed() -> void:
 	_refresh_buttons()
 
 
-func _on_lock_changed(target: Node2D) -> void:
-	if target != null:
-		lock_button.text = "Locked: %s  [Q]" % target.name
+func _on_lock_changed(_target: Node2D) -> void:
+	# The lock's identity is carried by the bracket on the target and the
+	# reticle on the radar, so the button just re-reads the count. Naming the
+	# target here would be overwritten by `_refresh_buttons` on the same call.
 	_refresh_buttons()

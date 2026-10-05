@@ -1,14 +1,8 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=2 format=3]
 
 [ext_resource type="Script" path="res://scripts/sonar_ring.gd" id="1_ring"]
-
-[sub_resource type="CircleShape2D" id="CircleShape2D_ring"]
-radius = 1.0
 
 [node name="SonarRing" type="Area2D"]
 collision_layer = 0
 collision_mask = 0
 script = ExtResource("1_ring")
-
-[node name="RingShape" type="CollisionShape2D" parent="."]
-shape = SubResource("CircleShape2D_ring")

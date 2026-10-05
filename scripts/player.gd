@@ -329,12 +329,17 @@ func contacts() -> Array[Node2D]:
 
 
 func set_lock(target: Node2D) -> void:
-	if locked_target == target:
-		return
-	# Clear the outgoing bracket here rather than in a later sweep, so the mark
-	# never outlives the lock by a frame.
-	if locked_target is SeaEnemy and is_instance_valid(locked_target):
-		(locked_target as SeaEnemy).locked = false
+	# Validity has to be checked before anything else touches the old target, and
+	# in particular before `is`: running `is` against a freed instance is itself a
+	# runtime error, which is exactly what happens when a torpedo kills the fish
+	# you have locked and the lock is dropped a frame later.
+	if is_instance_valid(locked_target):
+		if locked_target == target:
+			return
+		# Clear the outgoing bracket here rather than in a later sweep, so the
+		# mark never outlives the lock by a frame.
+		if locked_target is SeaEnemy:
+			(locked_target as SeaEnemy).locked = false
 	locked_target = target
 	lock_changed.emit(locked_target)
 
