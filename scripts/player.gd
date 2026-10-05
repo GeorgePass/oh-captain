@@ -34,6 +34,11 @@ func _ready() -> void:
 	_sonar = get_node_or_null("Sonar") as Sonar
 	if _sonar != null:
 		_sonar.contacts_changed.connect(_on_contacts_changed)
+	# The camera rides on the hull, so it follows for free and survives the
+	# world-wrap teleport without needing its position corrected.
+	var cam := get_node_or_null("Camera2D") as Camera2D
+	if cam != null:
+		cam.make_current()
 	hp_changed.emit(hp, max_hp)
 	ammo_changed.emit(ammo, max_ammo)
 	queue_redraw()
@@ -45,7 +50,6 @@ func _physics_process(delta: float) -> void:
 	if _damage_cooldown > 0.0:
 		_damage_cooldown = maxf(_damage_cooldown - delta, 0.0)
 
-	_read_discrete_input()
 	_read_input(delta)
 	move_and_slide()
 	_resolve_contact_damage()
@@ -53,17 +57,20 @@ func _physics_process(delta: float) -> void:
 	queue_redraw()
 
 
-## Sonar / lock / fire are polled rather than handled in _unhandled_input:
-## Tab is Godot's built-in ui_focus_next, so the GUI can consume the key event
-## before an unhandled-input handler ever sees it.
-func _read_discrete_input() -> void:
-	if hp <= 0:
+## Discrete actions are handled from _input rather than polled in
+## _physics_process or routed through _unhandled_input:
+##   - _input runs before GUI dispatch, so Tab still arrives even though it is
+##     the built-in ui_focus_next and the HUD would otherwise swallow it.
+##   - event-based edges are not sampled once per physics frame, so a quick tap
+##     can never fall between two frames and get dropped.
+func _input(event: InputEvent) -> void:
+	if hp <= 0 or not event.is_pressed() or event.is_echo():
 		return
-	if Input.is_action_just_pressed("toggle_sonar"):
+	if event.is_action("toggle_sonar"):
 		toggle_sonar()
-	if Input.is_action_just_pressed("cycle_lock"):
+	elif event.is_action("cycle_lock"):
 		cycle_lock()
-	if Input.is_action_just_pressed("fire"):
+	elif event.is_action("fire"):
 		fire()
 
 

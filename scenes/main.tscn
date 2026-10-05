@@ -10,9 +10,6 @@ script = ExtResource("1_main")
 
 [node name="World" type="Node2D" parent="."]
 
-[node name="Camera2D" type="Camera2D" parent="World"]
-zoom = Vector2(1.6, 1.6)
-
 [node name="Player" parent="World" instance=ExtResource("4_player")]
 
 [node name="Reefs" type="Node2D" parent="World"]

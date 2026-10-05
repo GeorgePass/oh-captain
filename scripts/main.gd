@@ -15,7 +15,6 @@ const FISH_SPAWN_MARGIN := 160.0
 @onready var reefs: Node2D = $World/Reefs
 @onready var wrecks: Node2D = $World/Wrecks
 @onready var fish_container: Node2D = $World/Fish
-@onready var camera: Camera2D = $World/Camera2D
 @onready var hud: CanvasLayer = $HUD
 
 var _rng := RandomNumberGenerator.new()
@@ -28,7 +27,6 @@ func _ready() -> void:
 	_spawn_fish()
 	player.died.connect(_on_player_died)
 	hud.bind(player)
-	camera.make_current()
 
 
 func _spawn_reefs() -> void:
@@ -71,7 +69,7 @@ func _random_world_point() -> Vector2:
 ## A point beyond the visible viewport edge, projected from the player's
 ## position so fish always enter from off-screen.
 func _offscreen_point() -> Vector2:
-	var margin := _viewport_half_diagonal() + FISH_SPAWN_MARGIN
+	var margin := _visible_half_diagonal() + FISH_SPAWN_MARGIN
 	for attempt in 24:
 		var angle := _rng.randf_range(0.0, TAU)
 		var candidate := player.position + Vector2.RIGHT.rotated(angle) * margin
@@ -82,9 +80,14 @@ func _offscreen_point() -> Vector2:
 	return _random_world_point()
 
 
-func _viewport_half_diagonal() -> float:
+## Half-diagonal of the visible world area, in world units. The viewport rect
+## is in pixels, so camera zoom has to come back out or fish spawn ~1/zoom
+## too far from the hull and drift in late.
+func _visible_half_diagonal() -> float:
 	var viewport := get_viewport_rect().size
-	return Vector2(viewport.x, viewport.y).length() * 0.5
+	var cam := player.get_node_or_null("Camera2D") as Camera2D
+	var zoom := cam.zoom if cam != null else Vector2.ONE
+	return Vector2(viewport.x / zoom.x, viewport.y / zoom.y).length() * 0.5
 
 
 func _on_player_died(_player: Node2D) -> void:

@@ -17,3 +17,8 @@ shape = SubResource("CircleShape2D_hull")
 
 [node name="Sonar" type="Node2D" parent="."]
 script = ExtResource("2_sonar")
+
+[node name="Camera2D" type="Camera2D" parent="."]
+zoom = Vector2(1.6, 1.6)
+position_smoothing_enabled = true
+position_smoothing_speed = 6.0
