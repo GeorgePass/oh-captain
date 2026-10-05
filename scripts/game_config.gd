@@ -25,17 +25,21 @@ const WORLD_SIZE := 3000.0
 const WORLD_HALF := WORLD_SIZE * 0.5
 
 # --- Player ---
+## Heavy boat feel: low thrust and low drag, so it takes real distance to get
+## up to speed and even longer to coast to a stop.
 const PLAYER_MAX_HP := 50
 const PLAYER_MAX_AMMO := 20
-const PLAYER_THRUST := 620.0
-const PLAYER_REVERSE_THRUST := 340.0
-const PLAYER_TURN_RATE := 3.0
-const PLAYER_DRAG := 2.6
-const PLAYER_MAX_SPEED := 420.0
+const PLAYER_THRUST := 250.0
+const PLAYER_REVERSE_THRUST := 150.0
+const PLAYER_TURN_RATE := 2.4
+## Multiplied by 120 to get the deceleration in px/s^2 (~108).
+const PLAYER_DRAG := 0.9
+const PLAYER_MAX_SPEED := 230.0
 const PLAYER_RADIUS := 15.0
 const FIRE_COOLDOWN := 0.45
-## Player speed above which nearby fish get alerted. Rewards slow, careful play.
-const FAST_SPEED := 190.0
+## Player speed above which nearby fish get alerted. Deliberately well under
+## PLAYER_MAX_SPEED, so throttling up trades stealth for pace.
+const FAST_SPEED := 140.0
 
 # Contact damage: noticeable, but survivable through several mistakes.
 const REEF_CONTACT_DMG := 14
@@ -56,16 +60,21 @@ const SONAR_BLIP_DURATION := 1.2
 const SONAR_HOSTILE_RADIUS := 420.0
 
 # --- Fish ---
+## Fish are nimbler than the hull: they accelerate and stop harder, but their
+## top speed stays under PLAYER_MAX_SPEED, so you can always outrun one.
 const FISH_MAX_HP := 5
-const FISH_PASSIVE_SPEED := 45.0
-const FISH_CHARGE_SPEED := 230.0
-const FISH_TURN_RATE := 3.0
+const FISH_PASSIVE_SPEED := 32.0
+const FISH_CHARGE_SPEED := 175.0
+const FISH_TURN_RATE := 4.0
+## Higher than the player's response rate, per the brief.
+const FISH_ACCEL := 5.5
 const FISH_RADIUS := 13.0
 
 # --- Torpedo ---
-const TORPEDO_SPEED := 520.0
+## Scaled down with the hull so it still outruns the boat it came from.
+const TORPEDO_SPEED := 330.0
 const TORPEDO_DAMAGE := 10
-const TORPEDO_LIFETIME := 4.0
+const TORPEDO_LIFETIME := 5.0
 const TORPEDO_TURN_RATE := 1.6
 const TORPEDO_SPAWN_OFFSET := 34.0
 const TORPEDO_RADIUS := 5.0

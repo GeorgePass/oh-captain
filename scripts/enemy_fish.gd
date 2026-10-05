@@ -45,7 +45,7 @@ func _drift(delta: float) -> void:
 	if _wander_timer <= 0.0:
 		_wander_timer = randf_range(1.2, 3.0)
 		_wander_dir = Vector2.RIGHT.rotated(randf() * TAU)
-	velocity = velocity.lerp(_wander_dir * GameConfig.FISH_PASSIVE_SPEED, 2.0 * delta)
+	velocity = velocity.lerp(_wander_dir * GameConfig.FISH_PASSIVE_SPEED, GameConfig.FISH_ACCEL * delta)
 	if velocity.length_squared() > 1.0:
 		rotation = velocity.angle()
 
@@ -58,7 +58,7 @@ func _chase(delta: float) -> void:
 	var to_player := player.global_position - global_position
 	if to_player.length() < 4.0:
 		return
-	velocity = velocity.lerp(to_player.normalized() * GameConfig.FISH_CHARGE_SPEED, 3.0 * delta)
+	velocity = velocity.lerp(to_player.normalized() * GameConfig.FISH_CHARGE_SPEED, GameConfig.FISH_ACCEL * delta)
 	rotation = lerp_angle(rotation, velocity.angle(), GameConfig.FISH_TURN_RATE * delta)
 
 

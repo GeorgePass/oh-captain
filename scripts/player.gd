@@ -75,7 +75,8 @@ func _input(event: InputEvent) -> void:
 
 
 func _read_input(delta: float) -> void:
-	# Turning is direct, thrust is inertial: you can only turn while moving.
+	# Turning is direct and thrust is inertial, so the hull carries its momentum
+	# through a turn instead of pivoting on the spot.
 	if Input.is_action_pressed("turn_left"):
 		rotation -= GameConfig.PLAYER_TURN_RATE * delta
 	if Input.is_action_pressed("turn_right"):
