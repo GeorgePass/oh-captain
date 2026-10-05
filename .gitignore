@@ -1,0 +1,29 @@
+# Godot 4+ specific ignores
+.godot/
+/android/
+
+# Godot build / export artifacts
+/build/
+/export/
+export_presets.cfg
+*.translation
+
+# Godot AI addon internals (cache, backups, update staging)
+addons/.godot_ai_update/
+
+# Mono / C# (if ever used)
+.mono/
+data_*/
+mono_crash.*.json
+
+# OS noise
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor / OS cruft
+*.tmp
+*.bak
+*.log
+.vscode/
+.idea/
