@@ -60,7 +60,6 @@ const PLAYER_REVERSE_THRUST := PLAYER_REVERSE_ACCEL + PLAYER_DECEL
 ## Direct steering of the nose only. The hull carries its momentum through a
 ## turn; spinning does not redirect it, only the thrust vector does.
 const PLAYER_TURN_RATE := 1.6 * SPEED_SCALE
-const PLAYER_RADIUS := 15.0
 const FIRE_COOLDOWN := 0.45
 ## Speed above which the hull is considered to be sprinting, and can be heard
 ## at roughly twice the normal detection radius. High enough that only a real
@@ -195,7 +194,6 @@ const ENEMY_AMMO_DROP := 4
 ## barely scratches the hull.
 const FISH_MAX_HP := 5
 const FISH_CHARGE_SPEED := 175.0 * SPEED_SCALE
-const FISH_RADIUS := 13.0
 const FISH_CONTACT_DMG := 4
 const FISH_GOLD_MIN := 2
 const FISH_GOLD_MAX := 5
@@ -207,7 +205,6 @@ const CRAB_PASSIVE_SPEED := 16.0 * SPEED_SCALE
 const CRAB_CHARGE_SPEED := 112.0 * SPEED_SCALE
 const CRAB_TURN_RATE := 2.0 * SPEED_SCALE
 const CRAB_ACCEL := 2.2
-const CRAB_RADIUS := 26.0
 const CRAB_CONTACT_DMG := 16
 const CRAB_GOLD_MIN := 12
 const CRAB_GOLD_MAX := 20
