@@ -73,7 +73,7 @@ func _draw() -> void:
 	for contact in contacts:
 		if not is_instance_valid(contact):
 			continue
-		var rel := (contact.global_position - player.global_position) * scale
+		var rel := GameConfig.wrapped_delta(player.global_position, contact.global_position) * scale
 		# Clamp instead of cull: a contact beyond range still hugs the rim.
 		if rel.length() > radius - 5.0:
 			rel = rel.normalized() * (radius - 5.0)

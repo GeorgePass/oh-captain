@@ -121,7 +121,7 @@ func _resolve_contact_damage() -> void:
 			take_damage(enemy.contact_damage)
 			# Knocked back a little, so a committed enemy cannot grind the hull
 			# down by riding it.
-			velocity = (global_position - enemy.global_position).normalized() \
+			velocity = GameConfig.wrapped_delta(enemy.global_position, global_position).normalized() \
 				* GameConfig.CONTACT_KNOCKBACK + velocity * 0.3
 			_damage_cooldown = GameConfig.CONTACT_DMG_COOLDOWN
 			return
@@ -194,7 +194,9 @@ func fire() -> Torpedo:
 	# error, so re-check validity here rather than trusting the lock.
 	if is_instance_valid(locked_target):
 		torpedo.target = locked_target
-	torpedo.launch(global_position + direction * GameConfig.TORPEDO_SPAWN_OFFSET, direction)
+	torpedo.launch(
+		GameConfig.wrap_position(global_position + direction * GameConfig.TORPEDO_SPAWN_OFFSET),
+		direction)
 
 	# Only bill the shot once it actually exists.
 	ammo -= 1
@@ -287,7 +289,7 @@ func _refresh_lockable() -> void:
 		var enemy := node as SeaEnemy
 		if enemy == null or not is_instance_valid(enemy):
 			continue
-		var d := global_position.distance_to(enemy.global_position)
+		var d := GameConfig.wrapped_delta(global_position, enemy.global_position).length()
 		var on_sonar := _sonar != null and _sonar.has_contact(enemy)
 
 		# The margin makes the edge of sight forgiving: an enemy has to actually
@@ -355,8 +357,8 @@ func _validate_lock() -> void:
 
 
 func _by_distance(a: Node2D, b: Node2D) -> bool:
-	return global_position.distance_squared_to(a.global_position) \
-		< global_position.distance_squared_to(b.global_position)
+	return GameConfig.wrapped_delta(global_position, a.global_position).length_squared() \
+		< GameConfig.wrapped_delta(global_position, b.global_position).length_squared()
 
 
 func _draw() -> void:

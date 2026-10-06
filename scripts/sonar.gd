@@ -73,7 +73,7 @@ func _passive_scan(_delta: float) -> void:
 		if enemy == null or not is_instance_valid(enemy):
 			_blip_at.erase(node)
 			continue
-		var dist := player.global_position.distance_to(enemy.global_position)
+		var dist := GameConfig.wrapped_delta(player.global_position, enemy.global_position).length()
 		if dist <= GameConfig.SONAR_PROXIMITY_RADIUS:
 			reveal(enemy, GameConfig.SONAR_CONTACT_DURATION)
 		elif enemy.velocity.length() > GameConfig.SONAR_FAST_ENEMY_SPEED:
@@ -176,22 +176,15 @@ func _on_ring_reached(enemy: SeaEnemy) -> void:
 	if not is_instance_valid(enemy):
 		return
 	# Reefs occlude the ping: a reef between player and enemy hides the contact.
-	if _blocked_by_reef(_ping_origin, enemy.global_position):
+	if GameConfig.reef_between(get_world_2d().direct_space_state,
+			_ping_origin, enemy.global_position):
 		return
 	reveal(enemy, GameConfig.SONAR_CONTACT_DURATION)
 	# Jitter the fix so an alerted search converges on the area, not the hull.
 	var spread := Vector2.from_angle(_rng.randf() * TAU) * GameConfig.SONAR_PING_SEARCH_SPREAD
-	enemy.set_alert(_ping_origin + spread)
-
-
-func _blocked_by_reef(from: Vector2, to: Vector2) -> bool:
-	if from.is_equal_approx(to):
-		return false
-	var space := get_world_2d().direct_space_state
-	var query := PhysicsRayQueryParameters2D.create(from, to, GameConfig.LAYER_REEF_BIT)
-	query.collide_with_areas = false
-	query.collide_with_bodies = true
-	return not space.intersect_ray(query).is_empty()
+	# Folded back inside the water: the spread can carry the fix past an edge, and
+	# an un-wrapped guess makes the search walk the long way round to reach it.
+	enemy.set_alert(GameConfig.wrap_position(_ping_origin + spread))
 
 
 func reveal(fish: SeaEnemy, duration: float) -> void:

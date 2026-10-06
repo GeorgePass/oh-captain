@@ -44,7 +44,7 @@ func _scan(prev: float, now: float) -> void:
 		var enemy := node as SeaEnemy
 		if enemy == null or not is_instance_valid(enemy):
 			continue
-		var d := origin.distance_to(enemy.global_position)
+		var d := GameConfig.wrapped_delta(origin, enemy.global_position).length()
 		# Only fire on the frame the edge crosses this distance.
 		if d > prev and d <= now:
 			reached.emit(enemy)

@@ -73,7 +73,7 @@ func _impact(sound: StringName) -> void:
 func _steer(delta: float) -> void:
 	if target == null or not is_instance_valid(target):
 		return
-	var desired := (target.global_position - global_position).angle()
+	var desired := GameConfig.wrapped_delta(global_position, target.global_position).angle()
 	# Mild steering: enough to correct a moving target, not enough to snap.
 	var step := homing_turn_rate * delta
 	var current := velocity.angle()

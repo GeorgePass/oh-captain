@@ -121,7 +121,7 @@ func _flee(delta: float) -> void:
 	if player == null:
 		_drift(delta)
 		return
-	var away := global_position - player.global_position
+	var away := GameConfig.wrapped_delta(player.global_position, global_position)
 	if away.length() < 1.0:
 		away = Vector2.RIGHT.rotated(rotation)
 	velocity = velocity.lerp(away.normalized() * GameConfig.ENEMY_FLEE_SPEED, accel * delta)
@@ -136,7 +136,7 @@ func _flee(delta: float) -> void:
 func on_neighbour_died(at: Vector2) -> void:
 	if state == State.FLEEING or not coward():
 		return
-	if global_position.distance_to(at) > GameConfig.ENEMY_FLEE_PANIC_RADIUS:
+	if GameConfig.wrapped_delta(at, global_position).length() > GameConfig.ENEMY_FLEE_PANIC_RADIUS:
 		return
 	set_fleeing()
 
@@ -175,7 +175,7 @@ func _tick_swim(delta: float) -> void:
 	if player == null or not is_instance_valid(player):
 		return
 	var audible := GameConfig.FISH_EARSHOT_RADIUS * GameConfig.ENEMY_SWIM_AUDIBLE_MULT
-	if global_position.distance_to(player.global_position) > audible:
+	if GameConfig.wrapped_delta(player.global_position, global_position).length() > audible:
 		return
 	AudioDirector.play_at(get_tree(), &"swim", global_position, GameConfig.VOL_ENEMY)
 
@@ -197,7 +197,7 @@ func _chase(delta: float) -> void:
 	if player == null:
 		_drift(delta)
 		return
-	var to_player := player.global_position - global_position
+	var to_player := GameConfig.wrapped_delta(global_position, player.global_position)
 	if to_player.length() < 4.0:
 		return
 	velocity = velocity.lerp(to_player.normalized() * charge_speed, accel * delta)
@@ -210,13 +210,13 @@ func _investigate(delta: float) -> void:
 	var goal := _last_known
 	# Within a short leash of the guess, sweep a small circle instead of
 	# sitting still, so it reads as searching rather than loitering.
-	var offset := global_position - _last_known
+	var offset := GameConfig.wrapped_delta(_last_known, global_position)
 	if offset.length() < GameConfig.ENEMY_SEARCH_RADIUS:
 		_sweep_phase += delta * GameConfig.ENEMY_SEARCH_SWEEP_RATE
 		var sweep := Vector2.from_angle(_sweep_phase + _sweep_seed)
 		goal = _last_known + sweep * GameConfig.ENEMY_SEARCH_RADIUS * 0.6
 
-	var to_goal := goal - global_position
+	var to_goal := GameConfig.wrapped_delta(global_position, goal)
 	if to_goal.length() > 6.0:
 		velocity = velocity.lerp(to_goal.normalized() * GameConfig.ENEMY_ALERT_SPEED, accel * delta)
 		rotation = lerp_angle(rotation, velocity.angle(), turn_rate * delta)
@@ -239,7 +239,7 @@ func _check_detection(delta: float) -> void:
 	var player := get_player()
 	if player == null:
 		return
-	var dist := global_position.distance_to(player.global_position)
+	var dist := GameConfig.wrapped_delta(global_position, player.global_position).length()
 	var earshot := GameConfig.FISH_EARSHOT_RADIUS
 	if player.velocity.length() >= GameConfig.FAST_SPEED:
 		earshot *= GameConfig.FISH_EARSHOT_SPRINT_MULT
@@ -261,13 +261,8 @@ func _check_detection(delta: float) -> void:
 
 ## Reefs between the hull and the enemy muffle it, same as they block the ping.
 func _muted_by_reef(player_pos: Vector2) -> bool:
-	if global_position.is_equal_approx(player_pos):
-		return false
-	var query := PhysicsRayQueryParameters2D.create(
-		global_position, player_pos, GameConfig.LAYER_REEF_BIT)
-	query.collide_with_areas = false
-	query.collide_with_bodies = true
-	return not get_world_2d().direct_space_state.intersect_ray(query).is_empty()
+	return GameConfig.reef_between(get_world_2d().direct_space_state,
+		global_position, player_pos)
 
 
 # --- State changes -----------------------------------------------------------

@@ -59,7 +59,7 @@ func _physics_process(delta: float) -> void:
 	var pulled := false
 
 	if player != null and is_instance_valid(player):
-		var to_player := player.global_position - global_position
+		var to_player := GameConfig.wrapped_delta(global_position, player.global_position)
 		var dist := to_player.length()
 		if dist <= GameConfig.PICKUP_COLLECT_RADIUS:
 			_collect(player)

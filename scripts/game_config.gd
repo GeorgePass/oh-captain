@@ -258,24 +258,53 @@ static func seeded_at(p: Vector2) -> RandomNumberGenerator:
 	return seeded_rng(cell.x * 73856093 ^ cell.y * 19349663)
 
 
+## Folds one axis back into range.
+##
+## One step is always enough in both directions it is used. For a position that
+## moves, the fastest anything travels is a small fraction of the world in a
+## frame. For a difference between two points, the world is exactly one width
+## across and both points are inside it, so the difference cannot exceed one
+## width either.
+static func _fold(v: float) -> float:
+	if v > WORLD_HALF:
+		return v - WORLD_SIZE
+	if v < -WORLD_HALF:
+		return v + WORLD_SIZE
+	return v
+
+
 ## Folds a position back inside the world rectangle. The water wraps rather than
 ## ending, so anything that strays past an edge comes back out the far side
 ## instead of stopping at a wall.
-##
-## One step is always enough. The fastest anything moves is a small fraction of
-## the world in a frame, so nothing can be more than one width out and a loop
-## would never be needed.
 static func wrap_position(p: Vector2) -> Vector2:
-	var h := WORLD_HALF
-	if p.x > h:
-		p.x -= WORLD_SIZE
-	elif p.x < -h:
-		p.x += WORLD_SIZE
-	if p.y > h:
-		p.y -= WORLD_SIZE
-	elif p.y < -h:
-		p.y += WORLD_SIZE
-	return p
+	return Vector2(_fold(p.x), _fold(p.y))
+
+
+## The shortest way from `from` to `to` across the wrapped water.
+##
+## Subtracting positions gives the long way round whenever the two sit either
+## side of a seam, which is why nothing in this game measures a distance or aims
+## a vector with plain arithmetic. A hull at x = -2099 and a fish at x = 2099 are
+## two pixels apart, not four thousand.
+static func wrapped_delta(from: Vector2, to: Vector2) -> Vector2:
+	var d := to - from
+	return Vector2(_fold(d.x), _fold(d.y))
+
+
+## Whether a reef sits between two points.
+##
+## Measured across the seam, so a reef just off the far edge still muffles what
+## is happening right beside you. Both the hydrophone and the sonar ask this,
+## and they used to keep separate copies of the same raycast.
+static func reef_between(space: PhysicsDirectSpaceState2D, from: Vector2, to: Vector2) -> bool:
+	var to_there := wrapped_delta(from, to)
+	if to_there.is_equal_approx(Vector2.ZERO):
+		return false
+	var query := PhysicsRayQueryParameters2D.create(
+		from, from + to_there, LAYER_REEF_BIT)
+	query.collide_with_areas = false
+	query.collide_with_bodies = true
+	return not space.intersect_ray(query).is_empty()
 
 
 ## Returns `pts` with its first vertex repeated at the end, for draw_polyline.
