@@ -14,10 +14,6 @@ func _init() -> void:
 	gold_max = GameConfig.FISH_GOLD_MAX
 
 
-func species() -> StringName:
-	return &"fish"
-
-
 ## One torpedo is ten damage against five HP, and a graze off a reef is one, and
 ## a fish should not have to be nearly dead to want to be somewhere else.
 func coward() -> bool:

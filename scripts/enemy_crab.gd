@@ -5,10 +5,6 @@ extends SeaEnemy
 ## far more than a fish. The threat is that you cannot simply outrun it and
 ## forget about it.
 
-func species() -> StringName:
-	return &"crab"
-
-
 func _init() -> void:
 	max_hp = GameConfig.CRAB_MAX_HP
 	passive_speed = GameConfig.CRAB_PASSIVE_SPEED

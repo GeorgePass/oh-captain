@@ -214,7 +214,10 @@ func reveal(fish: SeaEnemy, duration: float) -> void:
 ## now, instead of the state and species being re-derived from whatever object
 ## happened to arrive.
 func _play_blip(enemy: SeaEnemy) -> void:
-	AudioDirector.play_at(get_tree(), AudioDirector.blip_key(enemy.species(), enemy.state),
+	var voice := enemy.profile()
+	if voice == null:
+		return
+	AudioDirector.play_at(get_tree(), AudioDirector.blip_key(voice.id, enemy.state),
 		enemy.global_position, GameConfig.VOL_BLIP)
 
 

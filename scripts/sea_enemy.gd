@@ -305,9 +305,10 @@ func set_hostile() -> void:
 ## alerted" cue, because the creatures announcing themselves is more in keeping
 ## with the rest of the game than a HUD tone.
 func _cry(urgent: bool) -> void:
-	if is_inside_tree():
-		AudioDirector.play_at(get_tree(), AudioDirector.cry_key(urgent, species()),
-			global_position, GameConfig.VOL_ENEMY)
+	if not is_inside_tree() or _profile == null:
+		return
+	AudioDirector.play_at(get_tree(), AudioDirector.cry_key(urgent, _profile.id),
+		global_position, GameConfig.VOL_ENEMY)
 
 
 func set_passive() -> void:
@@ -335,21 +336,32 @@ func is_hostile() -> bool:
 	return state == State.HOSTILE
 
 
-## Sound key species. Overridden by each subclass so blips and cries can be
-## told apart without asking what class something is.
-func species() -> StringName:
-	return &"fish"
-
-
-## What this creature looks and sounds like, resolved from its identity.
+## What this creature looks and sounds like.
 ##
-## The radar and the audio both ask this rather than testing `is` against a
-## species class, so a new creature is described entirely by its entry in
-## Species.PROFILES and cannot be half-remembered in one place and not another.
-## Null means nothing is registered under this id, which is a mistake worth
-## surfacing rather than papering over with a default voice.
+## Handed over rather than looked up. It used to declare an id of its own and
+## then ask Species for the profile matching it, which meant the declaration and
+## the registry were two independent statements of the same fact with nothing to
+## make them agree. They did not agree, once: a creature whose id was not
+## registered spawned, swam, chased and died perfectly normally, and was silent
+## with no radar halo, because the audio streams were filed under the id the
+## registry knew and it was not this one.
+##
+## Whoever creates the creature passes the profile it came from. There is no way
+## to state an identity that the registry has not already agreed to.
+var _profile: Species.Profile
+
+
+## Adopts a species. Called before the node enters the tree, so a creature is
+## never briefly nameless.
+func apply_profile(p: Species.Profile) -> void:
+	if p == null:
+		push_error("SeaEnemy: %s spawned with no species profile, so it has no voice" % name)
+		return
+	_profile = p
+
+
 func profile() -> Species.Profile:
-	return Species.profile_for(species())
+	return _profile
 
 
 ## Whether this creature gives up rather than fight it out. Fish are cowards:

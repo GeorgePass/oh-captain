@@ -181,6 +181,11 @@ func _spawn_one(profile: Species.Profile) -> void:
 		push_error("Spawner: %s did not instantiate as a SeaEnemy" % profile.scene_path)
 		return
 	enemy.position = _offscreen_point()
+	# Identity comes from here rather than from the creature declaring its own.
+	# We already hold the profile we spawned it from, so there is no reason to
+	# let the two be told separately and disagree. Set before it enters the tree
+	# so it is never briefly nameless.
+	enemy.apply_profile(profile)
 	enemy.died.connect(_on_enemy_died)
 	container.add_child(enemy)
 

@@ -9,9 +9,14 @@ extends RefCounted
 ## audio list simply had no voice, and one missing from a `species == &"fish"`
 ## test inherited the crab's.
 ##
-## A new species is one Profile below plus a script that extends SeaEnemy and
-## names itself. Nothing else needs editing, and nothing can fall through to
-## the wrong defaults because there are no defaults to fall through to.
+## A new species is one Profile below plus a script that extends SeaEnemy for
+## its `_draw`. Nothing else needs editing, and nothing can fall through to the
+## wrong defaults because there are no defaults to fall through to.
+##
+## A creature is handed its Profile by whoever creates it, rather than declaring
+## an id and looking itself up here. That used to be a second, independent
+## statement of the same fact, and it is precisely the kind of thing that agrees
+## until the day someone adds a third creature and is in a hurry.
 
 ## Identity, spawning and presentation for one species. An object rather than a
 ## dictionary entry, so a misspelled key is a compile error instead of a null
@@ -85,15 +90,3 @@ static func _crab() -> Profile:
 	p.cry_hostile_sweep = 0.35
 	p.radar_halo = 7.5
 	return p
-
-
-## The profile for a species id, or null if nothing claims it.
-##
-## Null rather than a fallback on purpose. A caller that gets null has found a
-## real problem — something is reporting an identity nothing is registered for —
-## and should say so, rather than quietly drawing and sounding like a fish.
-static func profile_for(id: StringName) -> Profile:
-	for p in PROFILES:
-		if p.id == id:
-			return p
-	return null
