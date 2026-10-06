@@ -150,6 +150,16 @@ const INV_COLS := 2
 const INV_ROWS := 4
 const INV_CAPACITY := INV_COLS * INV_ROWS
 
+# --- Shop ---
+## The harbour counter. What each stack of cargo is worth lives on the item
+## itself (Item.Def.value); these are the two things the counter sells that are
+## not cargo. First-pass numbers — the captain tweaks them after playtest.
+const TORPEDO_PRICE := 4
+const REPAIR_PRICE := 12
+## How much hull one repair bill restores. A chunk rather than the whole hull,
+## so a repair is a judgement call and not a free full heal.
+const REPAIR_AMOUNT := 25
+
 # --- Sight ---
 ## How far the captain can actually see, and therefore how far they can lock on.
 ## Plain radial distance, no cone and no line-of-sight test. Sonar reaches far

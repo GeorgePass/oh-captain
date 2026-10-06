@@ -13,7 +13,7 @@ extends CanvasLayer
 @onready var lock_button: Button = $Controls/LockButton
 @onready var fire_button: Button = $Controls/FireButton
 @onready var cargo_button: Button = $Controls/CargoButton
-@onready var inventory: InventoryPanel = $Inventory
+@onready var inventory: InventoryPanel = $"../InventoryLayer/Inventory"
 @onready var drowning_rect: ColorRect = $Drowning
 
 var player: Player
@@ -61,7 +61,7 @@ func bind_oxygen(oxygen: Oxygen) -> void:
 ## still: the harbour screen owns the keys then, and one menu opening over
 ## another is how a pause stops meaning anything.
 func toggle_inventory() -> void:
-	inventory.visible = not inventory.visible
+	inventory.set_open(not inventory.visible)
 
 
 func _unhandled_input(event: InputEvent) -> void:

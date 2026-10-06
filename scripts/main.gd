@@ -27,6 +27,9 @@ func _ready() -> void:
 	# the tree has processed a frame, so it has to be wired first or nobody
 	# would ever pause.
 	harbor.docked_changed.connect(_on_docked_changed)
+	# The counter reads the cargo panel's selection, so the two have to meet
+	# before the first dock, which opens the panel right alongside the menu.
+	harbor.screen.bind_shop(hud.inventory)
 	game_over.hide_screen()
 	harbor.set_docked(true)
 
@@ -35,10 +38,16 @@ func _ready() -> void:
 ## immunity flag, no timer. Holding the tree still is what makes the harbour
 ## safe, and it is also what freezes the tank, the fish and the pings — one
 ## rule doing three jobs.
+##
+## The cargo panel rides along because it is the counter's window: alongside,
+## it is open for the sale the menu is offering, and the moment the captain
+## undocks it closes and stops indicating anything — a highlight that outlives
+## the window it was drawn in is how a sale sells the wrong stack.
 func _on_docked_changed(docked: bool) -> void:
 	get_tree().paused = docked
 	if docked:
 		oxygen.refill()
+	hud.inventory.set_open(docked)
 
 
 ## Relays a death to everything still alive. A fish bolts when it sees a

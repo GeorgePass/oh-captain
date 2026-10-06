@@ -25,12 +25,17 @@ class Def extends RefCounted:
 	## Used both for the pickup in the water and the disc in the hold, so the
 	## thing you swim over is recognisably the thing you already have.
 	var color: Color
+	## What one unit sells for at the harbour counter. The shop shows this
+	## number, and a highlighted stack is worth value * count.
+	var value := 0
 
-	func _init(id_: int = 0, name_: String = "", stack_: int = 1, color_: Color = Color.WHITE) -> void:
+	func _init(id_: int = 0, name_: String = "", stack_: int = 1, color_: Color = Color.WHITE,
+			value_: int = 0) -> void:
 		id = id_
 		name = name_
 		stack = stack_
 		color = color_
+		value = value_
 
 
 ## One stack sitting in one slot. A real type rather than a pair of numbers,
@@ -51,9 +56,9 @@ static var DEFS: Array[Def] = []
 static func _static_init() -> void:
 	# Index is the id.
 	DEFS = [
-		Def.new(FISH_MEAT, "Fish Meat", 5, Color(0.86, 0.62, 0.55)),
-		Def.new(CRAB_MEAT, "Crab Meat", 3, Color(0.88, 0.44, 0.36)),
-		Def.new(CRAB_SHELL, "Crab Shell", 1, Color(0.58, 0.80, 0.74)),
+		Def.new(FISH_MEAT, "Fish Meat", 5, Color(0.86, 0.62, 0.55), 5),
+		Def.new(CRAB_MEAT, "Crab Meat", 3, Color(0.88, 0.44, 0.36), 20),
+		Def.new(CRAB_SHELL, "Crab Shell", 1, Color(0.58, 0.80, 0.74), 50),
 	]
 
 

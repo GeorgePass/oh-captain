@@ -5,7 +5,9 @@ extends Node2D
 ##
 ## Within PICKUP_MAGNET_RADIUS the player pulls them in, accelerating as they
 ## close, and they are collected on contact. Further out they just sit in the
-## silt, which is what makes looting wrecks a reason to slow down.
+## silt, which is what makes looting wrecks a reason to slow down. A stack the
+## captain drops from the hold is the one exception: it goes out with `attracted`
+## false, so the magnet never brings it back.
 
 enum Kind { GOLD, ITEM }
 
@@ -18,6 +20,13 @@ var amount := 1
 ## wider `kind`, because cargo has its own numbering and gold is not one of
 ## the things in it.
 var item_id := 0
+
+## Whether the hull pulls this pickup in while it is close. Loot scatters with
+## this true, but a stack the captain drags out of the hold is deliberately
+## dropped with it false: when you throw cargo away it stays thrown, rather than
+## riding the magnet straight back into the slot you were trying to clear. It
+## can still be picked up again by bumping into it.
+var attracted := true
 
 var _velocity := Vector2.ZERO
 var _bob := 0.0
@@ -68,7 +77,7 @@ func _physics_process(delta: float) -> void:
 		if dist <= GameConfig.PICKUP_COLLECT_RADIUS:
 			_collect(player)
 			return
-		if dist <= GameConfig.PICKUP_MAGNET_RADIUS:
+		if attracted and dist <= GameConfig.PICKUP_MAGNET_RADIUS:
 			# Accelerate harder the closer it gets, so collection feels decisive
 			# rather than like chasing a slow target around the hull.
 			_velocity += to_player.normalized() * GameConfig.PICKUP_MAGNET_ACCEL * delta

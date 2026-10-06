@@ -206,6 +206,59 @@ func add_gold(amount: int) -> void:
 	gold_changed.emit(gold)
 
 
+## Pays back a purchase. Only the harbour shop asks, and only while the world
+## is on hold, so nothing here has to worry about racing anything still moving.
+func spend_gold(amount: int) -> bool:
+	if amount <= 0 or hp <= 0 or gold < amount:
+		return false
+	gold -= amount
+	gold_changed.emit(gold)
+	return true
+
+
+## Welds a bill onto the hull. Returns how much was actually restored, so a call
+## against a full or dead hull reads as zero and the counter does not bill for it.
+func repair(amount: int) -> int:
+	if amount <= 0 or hp <= 0 or hp >= max_hp:
+		return 0
+	var healed := mini(amount, max_hp - hp)
+	hp += healed
+	hp_changed.emit(hp, max_hp)
+	return healed
+
+
+## One slot's contents, with the bounds handled here rather than by every reader.
+func stack_at(slot: int) -> Item.Stack:
+	if slot < 0 or slot >= cargo.size():
+		return null
+	return cargo[slot]
+
+
+## Lifts a stack out of the hold, for dropping it over the side. The caller owns
+## what is left of it now, so a drop can lose cargo: that is the point.
+func remove_stack_at(slot: int) -> Item.Stack:
+	if slot < 0 or slot >= cargo.size():
+		return null
+	var stack := cargo[slot]
+	cargo.remove_at(slot)
+	inventory_changed.emit()
+	return stack
+
+
+## Sells whatever sits in one slot, for its whole value at once.
+##
+## Returns the gold raised so the counter can tell a sale from a mis-click, and
+## the shop clears its selection afterwards — after the sale the slot it was
+## highlighting is somebody else's cargo.
+func sell_stack(slot: int) -> int:
+	var stack := remove_stack_at(slot)
+	if stack == null:
+		return 0
+	var value := Item.get_def(stack.id).value * stack.count
+	add_gold(value)
+	return value
+
+
 ## Adds cargo, and reports whether all of it fit.
 ##
 ## All or nothing. A partial take would either quietly eat the remainder or
@@ -252,9 +305,8 @@ func _fits(id: int, count: int) -> bool:
 ## Clamped to max_ammo, so a purchase cannot push the player over the cap.
 ##
 ## Nothing in the water hands you torpedoes any more — not enemies, not wrecks —
-## so the only caller for this is the harbour shop, and until that lands it has
-## none. Kept rather than deleted because it is the shop's whole purpose and
-## the cap it enforces is not obvious enough to reinvent.
+## so the only caller is the harbour shop, which checks the price and the cap
+## before it spends.
 func add_ammo(amount: int) -> void:
 	if amount <= 0 or hp <= 0:
 		return

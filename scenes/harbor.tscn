@@ -68,14 +68,14 @@ anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
 offset_left = -260.0
-offset_top = -200.0
+offset_top = -220.0
 offset_right = 260.0
-offset_bottom = 200.0
+offset_bottom = 220.0
 grow_horizontal = 2
 grow_vertical = 2
 
 [node name="Box" type="VBoxContainer" parent="HarborScreen/Panel"]
-theme_override_constants/separation = 12
+theme_override_constants/separation = 10
 
 [node name="Title" type="Label" parent="HarborScreen/Panel/Box"]
 text = "HARBOR"
@@ -91,9 +91,49 @@ theme_override_font_sizes/font_size = 16
 theme_override_font_sizes/font_size = 18
 text = "SUPPLY"
 
-[node name="ShopStub" type="Label" parent="HarborScreen/Panel/Box"]
-text = "Torpedoes, hull plating and air flasks  —  opens later"
-modulate = Color(1, 1, 1, 0.55)
+[node name="TorpedoRow" type="HBoxContainer" parent="HarborScreen/Panel/Box"]
+theme_override_constants/separation = 10
+
+[node name="TorpedoLabel" type="Label" parent="HarborScreen/Panel/Box/TorpedoRow"]
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 15
+text = "TORPEDO  —  4 g"
+
+[node name="BuyTorpedo" type="Button" parent="HarborScreen/Panel/Box/TorpedoRow"]
+custom_minimum_size = Vector2(110, 36)
+focus_mode = 0
+text = "BUY"
+
+[node name="RepairRow" type="HBoxContainer" parent="HarborScreen/Panel/Box"]
+theme_override_constants/separation = 10
+
+[node name="RepairLabel" type="Label" parent="HarborScreen/Panel/Box/RepairRow"]
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 15
+text = "REPAIR  +25 HULL  —  12 g"
+
+[node name="BuyRepair" type="Button" parent="HarborScreen/Panel/Box/RepairRow"]
+custom_minimum_size = Vector2(110, 36)
+focus_mode = 0
+text = "BUY"
+
+[node name="SalesTitle" type="Label" parent="HarborScreen/Panel/Box"]
+theme_override_font_sizes/font_size = 18
+text = "CARGO SALES"
+
+[node name="SalesRow" type="HBoxContainer" parent="HarborScreen/Panel/Box"]
+theme_override_constants/separation = 10
+
+[node name="SelLabel" type="Label" parent="HarborScreen/Panel/Box/SalesRow"]
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 14
+text = "Select cargo on the left"
+
+[node name="SellButton" type="Button" parent="HarborScreen/Panel/Box/SalesRow"]
+custom_minimum_size = Vector2(110, 36)
+focus_mode = 0
+disabled = true
+text = "SELL"
 
 [node name="MissionTitle" type="Label" parent="HarborScreen/Panel/Box"]
 theme_override_font_sizes/font_size = 18
@@ -102,6 +142,7 @@ text = "MISSIONS"
 [node name="MissionStub" type="Label" parent="HarborScreen/Panel/Box"]
 text = "Contracts from the harbourmaster  —  opens later"
 modulate = Color(1, 1, 1, 0.55)
+theme_override_font_sizes/font_size = 14
 
 [node name="Launch" type="Button" parent="HarborScreen/Panel/Box"]
 custom_minimum_size = Vector2(0, 48)
@@ -111,5 +152,5 @@ text = "LAUNCH  [H]"
 [node name="Note" type="Label" parent="HarborScreen/Panel/Box"]
 text = "Nothing reaches you alongside, and the tank refills here."
 horizontal_alignment = 1
-theme_override_font_sizes/font_size = 14
+theme_override_font_sizes/font_size = 13
 modulate = Color(1, 1, 1, 0.5)

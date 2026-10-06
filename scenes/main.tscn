@@ -141,13 +141,16 @@ custom_minimum_size = Vector2(170, 40)
 focus_mode = 0
 text = "Cargo  [I]"
 
-[node name="Inventory" type="Control" parent="HUD"]
+[node name="InventoryLayer" type="CanvasLayer" parent="."]
+layer = 6
+process_mode = 3
+
+[node name="Inventory" type="Control" parent="InventoryLayer"]
 anchors_preset = 4
 anchor_top = 0.5
 anchor_right = 0.0
 anchor_bottom = 0.5
 grow_vertical = 2
-mouse_filter = 2
 script = ExtResource("10_cargo")
 
 [node name="Drowning" type="ColorRect" parent="HUD"]
