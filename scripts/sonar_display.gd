@@ -89,9 +89,12 @@ func _draw() -> void:
 				tint = HOSTILE_COLOR
 			elif enemy.is_alert():
 				tint = ALERT_COLOR
-			if contact is EnemyCrab:
-				# Crabs get a ring so they read as heavier at a glance.
-				draw_arc(dot, 7.5, 0.0, TAU, 14, tint.darkened(0.2), 1.6, true)
+			# Heavier creatures get a halo so they read as heavier at a glance.
+			# Asked of the creature rather than tested for by class, so a new
+			# species is described by its entry in Species and nothing else.
+			var voice := enemy.profile()
+			if voice != null and voice.radar_halo > 0.0:
+				draw_arc(dot, voice.radar_halo, 0.0, TAU, 14, tint.darkened(0.2), 1.6, true)
 		draw_circle(dot, 4.5, tint)
 
 		if contact == locked:

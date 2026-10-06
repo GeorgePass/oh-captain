@@ -325,6 +325,17 @@ func species() -> StringName:
 	return &"fish"
 
 
+## What this creature looks and sounds like, resolved from its identity.
+##
+## The radar and the audio both ask this rather than testing `is` against a
+## species class, so a new creature is described entirely by its entry in
+## Species.PROFILES and cannot be half-remembered in one place and not another.
+## Null means nothing is registered under this id, which is a mistake worth
+## surfacing rather than papering over with a default voice.
+func profile() -> Species.Profile:
+	return Species.profile_for(species())
+
+
 ## Whether this creature gives up rather than fight it out. Fish are cowards:
 ## one hit of any size and they run, and a kill nearby is enough on its own.
 ## The armoured things have to be worn down before they break.
@@ -401,14 +412,4 @@ func get_player() -> Player:
 
 
 func _wrap_world() -> void:
-	var p := global_position
-	var h := GameConfig.WORLD_HALF
-	if p.x > h:
-		p.x -= GameConfig.WORLD_SIZE
-	elif p.x < -h:
-		p.x += GameConfig.WORLD_SIZE
-	if p.y > h:
-		p.y -= GameConfig.WORLD_SIZE
-	elif p.y < -h:
-		p.y += GameConfig.WORLD_SIZE
-	global_position = p
+	global_position = GameConfig.wrap_position(global_position)

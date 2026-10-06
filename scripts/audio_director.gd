@@ -183,8 +183,11 @@ func _build_streams() -> void:
 	_streams[&"game_over"] = Sfx.game_over()
 	_streams[&"ambient"] = Sfx.ambient()
 
-	for species in [&"fish", &"crab"]:
+	# Enumerated rather than listed, so a new species is guaranteed a voice. The
+	# previous hardcoded pair meant a creature missing from this line simply had
+	# no sound at all, and nothing said so.
+	for profile in Species.PROFILES:
 		for state in [PASSIVE, ALERT, HOSTILE, FLEEING]:
-			_streams[blip_key(species, state)] = Sfx.contact_blip(species, state)
-		_streams[cry_key(false, species)] = Sfx.cry_alert(species)
-		_streams[cry_key(true, species)] = Sfx.cry_hostile(species)
+			_streams[blip_key(profile.id, state)] = Sfx.contact_blip(profile, state)
+		_streams[cry_key(false, profile.id)] = Sfx.cry_alert(profile)
+		_streams[cry_key(true, profile.id)] = Sfx.cry_hostile(profile)

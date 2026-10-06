@@ -219,6 +219,26 @@ const TORPEDO_SPAWN_OFFSET := 34.0
 const TORPEDO_RADIUS := 5.0
 
 
+## Folds a position back inside the world rectangle. The water wraps rather than
+## ending, so anything that strays past an edge comes back out the far side
+## instead of stopping at a wall.
+##
+## One step is always enough. The fastest anything moves is a small fraction of
+## the world in a frame, so nothing can be more than one width out and a loop
+## would never be needed.
+static func wrap_position(p: Vector2) -> Vector2:
+	var h := WORLD_HALF
+	if p.x > h:
+		p.x -= WORLD_SIZE
+	elif p.x < -h:
+		p.x += WORLD_SIZE
+	if p.y > h:
+		p.y -= WORLD_SIZE
+	elif p.y < -h:
+		p.y += WORLD_SIZE
+	return p
+
+
 ## Returns `pts` with its first vertex repeated at the end, for draw_polyline.
 static func closed(pts: PackedVector2Array) -> PackedVector2Array:
 	var out := PackedVector2Array()

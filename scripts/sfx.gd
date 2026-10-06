@@ -127,13 +127,12 @@ static func ping() -> AudioStreamWAV:
 ## Blips are keyed to species and state so a returning contact is identifiable
 ## without looking: high and soft for a drifting fish, low and urgent for an
 ## angry crab.
-static func contact_blip(species: StringName, state: int) -> AudioStreamWAV:
-	var high := species == &"fish"
+static func contact_blip(voice: Species.Profile, state: int) -> AudioStreamWAV:
 	var seconds := 0.26
 	var n := buffer(seconds).size()
 	var buf := buffer(seconds)
 
-	var base := 1150.0 if high else 380.0
+	var base := voice.blip_hz
 	var rise := 0.0
 	var dur := 0.09
 	var amp := 0.55
@@ -148,7 +147,7 @@ static func contact_blip(species: StringName, state: int) -> AudioStreamWAV:
 			harmonic = 0.2
 		2:
 			# Hostile: lower, harder, with an odd partial for grit.
-			base *= 0.62 if high else 0.72
+			base *= voice.blip_hostile_scale
 			dur = 0.15
 			amp = 0.6
 			harmonic = 0.4
@@ -274,12 +273,11 @@ static func swim() -> AudioStreamWAV:
 
 ## The cry when something realises the hull is there. Rising and questioning,
 ## so it reads as "where did that come from" rather than an attack.
-static func cry_alert(species: StringName) -> AudioStreamWAV:
-	var high := species == &"fish"
+static func cry_alert(voice: Species.Profile) -> AudioStreamWAV:
 	var seconds := 0.34
 	var n := buffer(seconds).size()
 	var buf := buffer(seconds)
-	var base := 620.0 if high else 240.0
+	var base := voice.cry_alert_hz
 
 	for i in n:
 		var t := float(i) / float(MIX_RATE)
@@ -293,14 +291,13 @@ static func cry_alert(species: StringName) -> AudioStreamWAV:
 ## The cry when it has actually seen you. Descending and harsh. A crab's is an
 ## octave and a half down and slower, which is what makes it read as heavier
 ## from across the map.
-static func cry_hostile(species: StringName) -> AudioStreamWAV:
-	var high := species == &"fish"
+static func cry_hostile(voice: Species.Profile) -> AudioStreamWAV:
 	var seconds := 0.5
 	var n := buffer(seconds).size()
 	var buf := buffer(seconds)
 	var r := rng(6)
-	var base := 1300.0 if high else 300.0
-	var sweep := 0.55 if high else 0.35
+	var base := voice.cry_hostile_hz
+	var sweep := voice.cry_hostile_sweep
 
 	for i in n:
 		var t := float(i) / float(MIX_RATE)

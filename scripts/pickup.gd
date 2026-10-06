@@ -86,17 +86,7 @@ func _collect(player: Player) -> void:
 
 
 func _wrap_world() -> void:
-	var p := global_position
-	var h := GameConfig.WORLD_HALF
-	if p.x > h:
-		p.x -= GameConfig.WORLD_SIZE
-	elif p.x < -h:
-		p.x += GameConfig.WORLD_SIZE
-	if p.y > h:
-		p.y -= GameConfig.WORLD_SIZE
-	elif p.y < -h:
-		p.y += GameConfig.WORLD_SIZE
-	global_position = p
+	global_position = GameConfig.wrap_position(global_position)
 
 
 func _draw() -> void:

@@ -35,25 +35,9 @@ const RESPAWN_INTERVAL := 12.0
 ## view so nothing is ever seen arriving.
 const SPAWN_MARGIN := 160.0
 
-## What the world holds, per species. Also the cap it refills to, so the count
-## the water was tuned at is the count it returns to.
-##
-## Adding a species is one entry here. It only has to extend SeaEnemy and sit
-## in a container node.
-const SPECIES := [
-	{
-		"id": &"fish",
-		"scene": "res://scenes/fish.tscn",
-		"container": "Fish",
-		"population": 9,
-	},
-	{
-		"id": &"crab",
-		"scene": "res://scenes/crab.tscn",
-		"container": "Crabs",
-		"population": 3,
-	},
-]
+## What the world holds, per species, and the cap it refills to, is no longer
+## decided here. Spawn data lives beside the rest of a species' description in
+## Species.PROFILES, so there is one list rather than two that have to agree.
 
 @onready var player: Player = get_node_or_null("../Player") as Player
 @onready var reef_container: Node2D = get_node_or_null("../Reefs") as Node2D
@@ -82,14 +66,14 @@ func _process(delta: float) -> void:
 	if player == null or not is_instance_valid(player) or player.hp <= 0:
 		return
 
-	for entry in SPECIES:
-		var id: StringName = entry["id"]
+	for profile in Species.PROFILES:
+		var id := profile.id
 		var left := float(_next_attempt.get(id, RESPAWN_INTERVAL)) - delta
 		if left > 0.0:
 			_next_attempt[id] = left
 			continue
 		_next_attempt[id] = RESPAWN_INTERVAL
-		_top_up(entry)
+		_top_up(profile)
 
 
 # --- Building the world ------------------------------------------------------
@@ -147,57 +131,54 @@ func _scatter_wreck_loot(wreck: Wreck) -> void:
 # --- Stock -------------------------------------------------------------------
 
 func _load_species_scenes() -> void:
-	for entry in SPECIES:
-		var path: String = entry["scene"]
-		var scene := load(path) as PackedScene
+	for profile in Species.PROFILES:
+		var scene := load(profile.scene_path) as PackedScene
 		if scene == null:
-			push_error("Spawner: could not load %s" % path)
+			push_error("Spawner: could not load %s" % profile.scene_path)
 			continue
-		_scenes[entry["id"]] = scene
+		_scenes[profile.id] = scene
 
 
-## Fills the water to its numbers, and staggers the first refill so a fish and
-## a crab are never both due on the same frame.
+## Fills the water to its numbers, and staggers the first refill so two species
+## are never both due on the same frame.
 func _seed_population() -> void:
-	var total := SPECIES.size()
+	var total := Species.PROFILES.size()
 	for i in total:
-		var entry: Dictionary = SPECIES[i]
-		var wanted := int(entry["population"])
-		for n in wanted:
-			_spawn_one(entry)
-		_next_attempt[entry["id"]] = RESPAWN_INTERVAL * float(i + 1) / float(total)
+		var profile := Species.PROFILES[i]
+		for n in profile.population:
+			_spawn_one(profile)
+		_next_attempt[profile.id] = RESPAWN_INTERVAL * float(i + 1) / float(total)
 
 
-## Adds one of a species to its container. The container is named in the table
+## Adds one of a species to its container. The container is named by the species
 ## and sits beside this node rather than inside it, so it is reached from up a
 ## level.
-func _container_for(entry: Dictionary) -> Node2D:
-	return get_node_or_null("../%s" % entry["container"]) as Node2D
+func _container_for(profile: Species.Profile) -> Node2D:
+	return get_node_or_null("../%s" % profile.container) as Node2D
 
 
 ## One more of a species, if the water has room for it.
-func _top_up(entry: Dictionary) -> void:
-	var container := _container_for(entry)
+func _top_up(profile: Species.Profile) -> void:
+	var container := _container_for(profile)
 	if container == null:
-		push_error("Spawner: no container node named %s" % entry["container"])
+		push_error("Spawner: no container node named %s" % profile.container)
 		return
 	# Children are freed on death, so the count is the truth. It lags a frame
 	# behind a kill because freeing is deferred, which against a twelve second
 	# clock is not worth measuring.
-	if container.get_child_count() >= int(entry["population"]):
+	if container.get_child_count() >= profile.population:
 		return
-	_spawn_one(entry)
+	_spawn_one(profile)
 
 
-func _spawn_one(entry: Dictionary) -> void:
-	var id: StringName = entry["id"]
-	var scene := _scenes.get(id) as PackedScene
-	var container := _container_for(entry)
+func _spawn_one(profile: Species.Profile) -> void:
+	var scene := _scenes.get(profile.id) as PackedScene
+	var container := _container_for(profile)
 	if scene == null or container == null:
 		return
 	var enemy := scene.instantiate() as SeaEnemy
 	if enemy == null:
-		push_error("Spawner: %s did not instantiate as a SeaEnemy" % entry["scene"])
+		push_error("Spawner: %s did not instantiate as a SeaEnemy" % profile.scene_path)
 		return
 	enemy.position = _offscreen_point()
 	enemy.died.connect(_on_enemy_died)
