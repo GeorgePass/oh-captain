@@ -30,11 +30,10 @@ var _rings: Array[SonarRing] = []
 
 var _blip_at: Dictionary = {}
 var _ping_origin := Vector2.ZERO
-var _rng := RandomNumberGenerator.new()
-
-
-func _ready() -> void:
-	_rng.randomize()
+## Seeded off the world seed rather than thrown from the global dice, so where
+## a ping sends a searching creature is a fixed decision you can reason about
+## instead of a fresh one every dive.
+var _rng := GameConfig.seeded_rng()
 
 
 func _process(delta: float) -> void:
@@ -181,7 +180,7 @@ func _on_ring_reached(enemy: SeaEnemy) -> void:
 		return
 	reveal(enemy, GameConfig.SONAR_CONTACT_DURATION)
 	# Jitter the fix so an alerted search converges on the area, not the hull.
-	var spread := Vector2.from_angle(randf() * TAU) * GameConfig.SONAR_PING_SEARCH_SPREAD
+	var spread := Vector2.from_angle(_rng.randf() * TAU) * GameConfig.SONAR_PING_SEARCH_SPREAD
 	enemy.set_alert(_ping_origin + spread)
 
 

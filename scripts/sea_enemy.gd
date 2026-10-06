@@ -68,17 +68,28 @@ var _swim_timer := 0.0
 ## left alone it simply runs out.
 var _lock_grace := 0.0
 
+## Own stream, off the world seed and where this creature was put in the water.
+## Per-creature rather than shared so one fish taking an extra roll cannot shift
+## another's sequence — otherwise the tenth thing you meet in the water is a
+## lottery ticket whose number depends on how long the first nine survived.
+var _rng: RandomNumberGenerator
+## Search sweep, advanced by the frame clock rather than read off the wall
+## clock. The wall-clock version gave every creature a sweep phase set by when
+## the process happened to start, which is variation the seed cannot reach.
+var _sweep_phase := 0.0
+
 
 func _ready() -> void:
+	_rng = GameConfig.seeded_at(global_position)
 	add_to_group(GROUP)
 	hp = max_hp
 	collision_layer = GameConfig.LAYER_ENEMY_BIT
 	collision_mask = GameConfig.ENEMY_MASK
 	motion_mode = CharacterBody2D.MOTION_MODE_FLOATING
 	z_index = 0
-	_wander_dir = Vector2.RIGHT.rotated(randf() * TAU)
-	_sweep_seed = randf() * TAU
-	_swim_timer = randf_range(0.5, GameConfig.ENEMY_SWIM_MAX_GAP)
+	_wander_dir = Vector2.RIGHT.rotated(_rng.randf() * TAU)
+	_sweep_seed = _rng.randf() * TAU
+	_swim_timer = _rng.randf_range(0.5, GameConfig.ENEMY_SWIM_MAX_GAP)
 	hp_changed.emit(hp, max_hp)
 
 
@@ -153,12 +164,12 @@ func is_fleeing() -> bool:
 ## fill the pool.
 func _tick_swim(delta: float) -> void:
 	if velocity.length() < passive_speed * 0.5:
-		_swim_timer = randf_range(1.5, GameConfig.ENEMY_SWIM_MAX_GAP)
+		_swim_timer = _rng.randf_range(1.5, GameConfig.ENEMY_SWIM_MAX_GAP)
 		return
 	_swim_timer -= delta
 	if _swim_timer > 0.0:
 		return
-	_swim_timer = randf_range(GameConfig.ENEMY_SWIM_MIN_GAP, GameConfig.ENEMY_SWIM_MAX_GAP)
+	_swim_timer = _rng.randf_range(GameConfig.ENEMY_SWIM_MIN_GAP, GameConfig.ENEMY_SWIM_MAX_GAP)
 
 	var player := get_player()
 	if player == null or not is_instance_valid(player):
@@ -174,8 +185,8 @@ func _tick_swim(delta: float) -> void:
 func _drift(delta: float) -> void:
 	_wander_timer -= delta
 	if _wander_timer <= 0.0:
-		_wander_timer = randf_range(1.2, 3.0)
-		_wander_dir = Vector2.RIGHT.rotated(randf() * TAU)
+		_wander_timer = _rng.randf_range(1.2, 3.0)
+		_wander_dir = Vector2.RIGHT.rotated(_rng.randf() * TAU)
 	velocity = velocity.lerp(_wander_dir * passive_speed, accel * delta)
 	if velocity.length_squared() > 1.0:
 		rotation = velocity.angle()
@@ -201,7 +212,8 @@ func _investigate(delta: float) -> void:
 	# sitting still, so it reads as searching rather than loitering.
 	var offset := global_position - _last_known
 	if offset.length() < GameConfig.ENEMY_SEARCH_RADIUS:
-		var sweep := Vector2.from_angle(float(Time.get_ticks_msec()) * 0.0016 + _sweep_seed)
+		_sweep_phase += delta * GameConfig.ENEMY_SEARCH_SWEEP_RATE
+		var sweep := Vector2.from_angle(_sweep_phase + _sweep_seed)
 		goal = _last_known + sweep * GameConfig.ENEMY_SEARCH_RADIUS * 0.6
 
 	var to_goal := goal - global_position
@@ -398,13 +410,13 @@ func _drop_loot() -> void:
 		parent = get_parent()
 	if parent == null:
 		return
-	var gold := randi_range(gold_min, gold_max)
+	var gold := _rng.randi_range(gold_min, gold_max)
 	var coins := clampi(gold / 3, 2, 5)
 	for i in coins:
 		var coin := Pickup.spawn(parent, global_position)
 		coin.amount = maxi(1, gold / coins)
 		coin.scatter()
-	if randf() < GameConfig.ENEMY_AMMO_CHANCE:
+	if _rng.randf() < GameConfig.ENEMY_AMMO_CHANCE:
 		var crate := Pickup.spawn(parent, global_position)
 		crate.kind = Pickup.Kind.AMMO
 		crate.amount = GameConfig.ENEMY_AMMO_DROP

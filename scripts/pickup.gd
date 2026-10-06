@@ -18,6 +18,10 @@ var amount := 1
 var _velocity := Vector2.ZERO
 var _bob := 0.0
 var _sweep_seed := 0.0
+## Own stream, off the world seed and where this coin was dropped. The sway and
+## the scatter are the least of it — a coin whose drift you cannot predict is a
+## coin whose landing spot you cannot use to judge a change to anything else.
+var _rng: RandomNumberGenerator
 
 
 ## Builds a pickup, parents it, and returns it. Returns null only if the
@@ -33,15 +37,16 @@ static func spawn(parent: Node, at: Vector2) -> Pickup:
 
 func _ready() -> void:
 	z_index = 1
-	_bob = randf() * TAU
-	_sweep_seed = randf() * TAU
+	_rng = GameConfig.seeded_at(global_position)
+	_bob = _rng.randf() * TAU
+	_sweep_seed = _rng.randf() * TAU
 	queue_redraw()
 
 
 ## Flicks the pickup out in a random direction, so a killed enemy scatters its
 ## loot instead of stacking it in one spot.
 func scatter() -> void:
-	_velocity = Vector2.RIGHT.rotated(randf() * TAU) * randf_range(40.0, 90.0)
+	_velocity = Vector2.RIGHT.rotated(_rng.randf() * TAU) * _rng.randf_range(40.0, 90.0)
 
 
 ## Sets an explicit drift, used to lay coins out along a wreck's axis.

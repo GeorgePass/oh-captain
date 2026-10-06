@@ -24,6 +24,16 @@ const TORPEDO_MASK := LAYER_ENEMY_BIT | LAYER_REEF_BIT
 const WORLD_SIZE := 4200.0
 const WORLD_HALF := WORLD_SIZE * 0.5
 
+## The one number the whole run hangs off.
+##
+## Every random draw in the game comes from a generator seeded off this, never
+## from the global dice. That is the difference between "I changed a speed and
+## the fish got slower" and "I changed a speed and something I could not see also
+## changed". With the global dice underneath, a tuning pass is measuring your
+## change plus noise you did not know was there, and the two are impossible to
+## separate afterwards.
+const WORLD_SEED := 20260905
+
 # --- Pace ---
 ## One knob for the tempo of the whole game. Every speed below is a base value
 ## times this, so relative speeds are held by construction rather than by
@@ -167,6 +177,10 @@ const ENEMY_ACCEL := 5.5
 const ENEMY_ALERT_SPEED := 62.0 * SPEED_SCALE
 ## Radius it sweeps around the last known position before giving up.
 const ENEMY_SEARCH_RADIUS := 90.0 * VIEW_SCALE
+## How fast that sweep turns, in radians per second. Slow enough to read as
+## casting about rather than orbiting, and per-creature phased so a shoal does
+## not fan out in step.
+const ENEMY_SEARCH_SWEEP_RATE := 1.6
 ## An enemy at or below one third of its HP gives up and runs for it.
 const ENEMY_FLEE_HP_DIVISOR := 3
 ## Fleeing speed, deliberately below the hull's top speed: a fish that bolts has
@@ -217,6 +231,31 @@ const TORPEDO_LIFETIME := 5.0
 const TORPEDO_TURN_RATE := 1.6 * SPEED_SCALE
 const TORPEDO_SPAWN_OFFSET := 34.0
 const TORPEDO_RADIUS := 5.0
+
+
+## A generator that repeats instead of a fresh throw of the global dice.
+##
+## `salt` keeps unrelated draws off each other's sequence. Leave it at zero for a
+## system with only one instance, such as the sonar.
+static func seeded_rng(salt: int = 0) -> RandomNumberGenerator:
+	var r := RandomNumberGenerator.new()
+	r.seed = WORLD_SEED + salt
+	return r
+
+
+## The same, for anything placed in the water: reefs, coins and creatures.
+##
+## Salted by position rather than by instance id. A restart builds a fresh tree
+## and hands out fresh ids, so an id-seeded world comes out identical on relaunch
+## and different on Dive Again - which is precisely the comparison you make most
+## often, so it is the one that has to hold. The spawner lays the water out the
+## same way every dive, so position holds still where the id does not.
+##
+## One world unit per cell, finer than anything that reads it: two things sharing
+## a stream would have to land within a pixel of each other.
+static func seeded_at(p: Vector2) -> RandomNumberGenerator:
+	var cell := Vector2i(roundi(p.x), roundi(p.y))
+	return seeded_rng(cell.x * 73856093 ^ cell.y * 19349663)
 
 
 ## Folds a position back inside the world rectangle. The water wraps rather than

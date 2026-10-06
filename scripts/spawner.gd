@@ -4,7 +4,9 @@ extends Node2D
 ##
 ## Everything here is seeded, so a dive is the same dive every time. That is
 ## what makes a change to a speed or a count something you can actually judge:
-## the water is held still while you change your mind about it.
+## the water is held still while you change your mind about it. The seed lives
+## in GameConfig rather than here, because it stopped being this node's business
+## once reefs, coins and creatures started drawing from it as well.
 ##
 ## Terrain is laid down at start and never touched again. Living things are
 ## topped back up to their numbers, slowly and off-screen, because a world that
@@ -13,8 +15,6 @@ extends Node2D
 ## Re-emitted for every enemy that dies, so whoever owns the consequences of a
 ## death can react without the spawner having to know what they are.
 signal enemy_died(enemy: SeaEnemy)
-
-const WORLD_SEED := 20260905
 
 ## Terrain scales with the water rather than against it. The fish do not: a
 ## bigger map with the same number of them is the point, and thinning them out
@@ -44,7 +44,7 @@ const SPAWN_MARGIN := 160.0
 @onready var wreck_container: Node2D = get_node_or_null("../Wrecks") as Node2D
 @onready var pickup_container: Node2D = get_node_or_null("../Pickups") as Node2D
 
-var _rng := RandomNumberGenerator.new()
+var _rng: RandomNumberGenerator
 ## Seconds until each species is next topped up, keyed by id.
 var _next_attempt := {}
 ## Scenes loaded once at start rather than on every respawn.
@@ -52,7 +52,7 @@ var _scenes := {}
 
 
 func _ready() -> void:
-	_rng.seed = WORLD_SEED
+	_rng = GameConfig.seeded_rng()
 	_build_reefs()
 	_build_wrecks()
 	_load_species_scenes()
