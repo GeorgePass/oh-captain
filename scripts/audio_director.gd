@@ -138,6 +138,9 @@ func _start_ambient() -> void:
 		_ambient = AudioStreamPlayer.new()
 		_ambient.stream = _streams[&"ambient"]
 		_ambient.bus = &"Ambience"
+		# The bus sits at unity, so the loop's own level is what makes it a
+		# background bed rather than competing with the torpedoes.
+		_ambient.volume_db = GameConfig.VOL_AMBIENCE
 		add_child(_ambient)
 	_ambient.play()
 

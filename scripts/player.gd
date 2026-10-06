@@ -45,6 +45,9 @@ func _ready() -> void:
 	var cam := get_node_or_null("Camera2D") as Camera2D
 	if cam != null:
 		cam.make_current()
+		# From the config, so retuning VIEW_SCALE cannot leave the player seeing
+		# further than they are allowed to lock.
+		cam.zoom = Vector2.ONE * GameConfig.CAMERA_ZOOM
 	hp_changed.emit(hp, max_hp)
 	ammo_changed.emit(ammo, max_ammo)
 	gold_changed.emit(gold)
@@ -220,11 +223,6 @@ func _spawn_torpedo() -> Torpedo:
 func toggle_sonar() -> void:
 	if _sonar != null:
 		_sonar.toggle()
-
-
-func request_ping() -> void:
-	if _sonar != null:
-		_sonar.ping()
 
 
 ## Q / Lock button: walks the lockable set nearest-first without ever offering

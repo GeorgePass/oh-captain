@@ -198,9 +198,8 @@ const ENEMY_SWIM_MIN_GAP := 2.5
 const ENEMY_SWIM_MAX_GAP := 6.5
 ## How far out a swimming sound is worth playing, as a multiple of earshot.
 const ENEMY_SWIM_AUDIBLE_MULT := 2.2
-## Gold and torpedoes dropped by a killed enemy.
-const ENEMY_GOLD_MIN := 2
-const ENEMY_GOLD_MAX := 6
+## Ammunition dropped by a killed enemy. Gold is per species rather than a
+## single pair, because a crab is worth hunting and a fish is not.
 const ENEMY_AMMO_CHANCE := 0.35
 const ENEMY_AMMO_DROP := 4
 
@@ -230,7 +229,6 @@ const TORPEDO_DAMAGE := 10
 const TORPEDO_LIFETIME := 5.0
 const TORPEDO_TURN_RATE := 1.6 * SPEED_SCALE
 const TORPEDO_SPAWN_OFFSET := 34.0
-const TORPEDO_RADIUS := 5.0
 
 
 ## A generator that repeats instead of a fresh throw of the global dice.
