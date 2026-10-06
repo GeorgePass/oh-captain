@@ -58,7 +58,7 @@ func bind(target: Player) -> void:
 func bind_oxygen(oxygen: Oxygen) -> void:
 	oxygen.oxygen_changed.connect(_on_oxygen_changed)
 	oxygen.drowning_changed.connect(_on_drowning_changed)
-	_on_oxygen_changed(oxygen.current, GameConfig.OXYGEN_MAX)
+	_on_oxygen_changed(oxygen.current, oxygen.max_oxygen)
 
 
 ## The mission line under the radar, and the radar's own copy of the errands:

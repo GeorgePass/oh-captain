@@ -102,15 +102,20 @@ func _draw() -> void:
 	if player == null or not is_instance_valid(player):
 		return
 
+	var sonar := player.sonar()
+	# The disc maps the sonar's own range to its full radius, so a refit that
+	# lengthens the ping stretches the same water across the same glass.
+	var sonar_range := sonar.max_range if sonar != null and sonar.max_range > 0.0 \
+		else GameConfig.SONAR_MAX_RANGE
+
 	# `scale` is a Control property; shadowing it raises a warning.
-	var scale := radius / GameConfig.SONAR_MAX_RANGE
+	var scale := radius / sonar_range
 	var contacts := player.contacts()
 	var locked := player.locked_target
 
 	# The ping wavefront itself, so the radar shows what is sweeping outward
 	# rather than only where it has already landed. Drawn under the contacts so
 	# a blip is never hidden behind a ring that happens to be passing over it.
-	var sonar := player.sonar()
 	if sonar != null:
 		for ring_radius in sonar.active_ring_radii():
 			if ring_radius <= 1.0:
@@ -177,5 +182,5 @@ func _draw() -> void:
 	draw_arc(center, 11.0, 0.0, TAU, 24, Color(PLAYER_COLOR.r, PLAYER_COLOR.g, PLAYER_COLOR.b, 0.45), 1.0, true)
 
 	range_label.text = "%dm  ·  %d contact%s" % [
-		roundi(GameConfig.SONAR_MAX_RANGE), contacts.size(), "" if contacts.size() == 1 else "s"
+		roundi(sonar_range), contacts.size(), "" if contacts.size() == 1 else "s"
 	]

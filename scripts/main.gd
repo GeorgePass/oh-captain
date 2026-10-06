@@ -13,6 +13,7 @@ extends Node2D
 @onready var outpost: Outpost = $World/Outpost
 @onready var missions: MissionDirector = $Missions
 @onready var oxygen: Oxygen = $Oxygen
+@onready var refit: RefitBay = $Refit
 @onready var hud: Hud = $HUD
 @onready var game_over: CanvasLayer = $GameOver
 
@@ -39,6 +40,9 @@ func _ready() -> void:
 	harbor.screen.bind_missions(missions)
 	outpost.screen.bind_missions(missions)
 	hud.bind_missions(missions)
+	# The refit rows read the yard, which reads the hull and the tank.
+	refit.bind(player, oxygen)
+	harbor.screen.bind_refit(refit)
 	game_over.hide_screen()
 	harbor.set_docked(true)
 

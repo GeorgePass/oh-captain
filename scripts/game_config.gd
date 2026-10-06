@@ -160,6 +160,24 @@ const REPAIR_PRICE := 12
 ## so a repair is a judgement call and not a free full heal.
 const REPAIR_AMOUNT := 25
 
+# --- Refit bay ---
+## The harbour's refit yard: five permanent buys for this run, each a stack of
+## five levels. Buying level N (1-based) costs the base multiplied by the step
+## (N-1) times, so the first buy is the base price and every further level
+## costs more. Refits are for the dive you are on, not the next one: a restart
+## tears the yard down with the rest of the run.
+const REFIT_MAX_LEVEL := 5
+## Base price and per-level multiplier, indexed by RefitBay.Track.
+const REFIT_PRICE_BASE := [15, 20, 8, 26, 32]
+const REFIT_PRICE_STEP := [1.8, 1.8, 1.7, 1.9, 1.9]
+## What one level adds to the base reading, per track: seconds of air, hull
+## points, torpedo slots, metres of sonar range, and a fraction of top speed.
+const REFIT_OXYGEN_STEP := 45.0
+const REFIT_HULL_STEP := 15
+const REFIT_AMMO_STEP := 8
+const REFIT_SONAR_STEP := 200.0
+const REFIT_SPEED_STEP := 0.12
+
 # --- Outpost ---
 ## The supply post on the far side of the water, a swim from home. It docks
 ## like the harbour and refills the tank, but sells nothing: its one errand is

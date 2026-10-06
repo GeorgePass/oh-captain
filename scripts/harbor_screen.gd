@@ -25,12 +25,17 @@ signal dock_toggled
 @onready var launch_button: Button = $Panel/Box/Launch
 @onready var mission_rows: VBoxContainer = $Panel/Box/MissionRows
 @onready var mission_note: Label = $Panel/Box/MissionNote
+@onready var refit_rows: VBoxContainer = $Panel/Box/RefitRows
 
 var _player: Player
 var _inventory: InventoryPanel
 var _missions: MissionDirector
+var _refit: RefitBay
 ## One accept button per errand, in counter order, filled from the scene.
 var _accept_buttons: Array[Button] = []
+## One label + buy button per refit track, in Track order, from the scene.
+var _refit_labels: Array[Label] = []
+var _refit_buttons: Array[Button] = []
 
 
 func _ready() -> void:
@@ -49,6 +54,18 @@ func _ready() -> void:
 		if accept != null:
 			accept.pressed.connect(_on_accept.bind(i))
 			_accept_buttons.append(accept)
+	# The refit rows are likewise written in Track order.
+	for i in refit_rows.get_child_count():
+		var row := refit_rows.get_child(i) as HBoxContainer
+		if row == null:
+			continue
+		var label := row.get_node_or_null("Name") as Label
+		if label != null:
+			_refit_labels.append(label)
+		var buy := row.get_node_or_null("Buy") as Button
+		if buy != null:
+			buy.pressed.connect(_on_buy_refit.bind(i))
+			_refit_buttons.append(buy)
 
 
 ## The hull's numbers are read on demand rather than pushed, because nothing
@@ -78,6 +95,18 @@ func _on_mission_changed(_mission: int, _met: bool) -> void:
 		refresh()
 
 
+## The refit rows read the RefitBay, so they are told when a level is bought.
+func bind_refit(refit: RefitBay) -> void:
+	_refit = refit
+	if refit != null:
+		refit.refit_changed.connect(_on_refit_changed)
+
+
+func _on_refit_changed() -> void:
+	if visible:
+		refresh()
+
+
 func refresh() -> void:
 	if _player == null or not is_instance_valid(_player):
 		return
@@ -91,6 +120,7 @@ func refresh() -> void:
 	buy_repair.disabled = _player.gold < GameConfig.REPAIR_PRICE \
 		or _player.hp >= _player.max_hp
 	_sync_sell_row()
+	_sync_refit()
 	_sync_missions()
 
 
@@ -121,6 +151,33 @@ func _on_accept(index: int) -> void:
 	if _missions == null or index < 0 or index >= MissionDirector.LIST.size():
 		return
 	if _missions.accept(MissionDirector.LIST[index].id):
+		refresh()
+
+
+## The refit section: five rows of level, what the next level lends, and a
+## price button that disables itself when it cannot be afforded or the track
+## is at the top. MAX reads as the ceiling, not a price.
+func _sync_refit() -> void:
+	if _refit == null:
+		return
+	for track in RefitBay.Track.size():
+		var label := _refit_labels[track]
+		var button := _refit_buttons[track]
+		label.text = "%s  Lv %d/%d  —  %s" % [
+			RefitBay.NAMES[track], _refit.level(track),
+			GameConfig.REFIT_MAX_LEVEL, _refit.gain_text(track)]
+		if _refit.maxed(track):
+			button.text = "MAX"
+			button.disabled = true
+		else:
+			button.text = "%d g" % _refit.price(track)
+			button.disabled = not _refit.can_buy(track)
+
+
+func _on_buy_refit(track: int) -> void:
+	if _refit == null:
+		return
+	if _refit.try_buy(track):
 		refresh()
 
 

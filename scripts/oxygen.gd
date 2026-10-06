@@ -19,12 +19,14 @@ signal drowning_changed(drowning: bool)
 
 @onready var player: Player = get_node_or_null("../World/Player") as Player
 
+## Full-tank capacity, grown by the refit bay. Defaults to the config number.
+var max_oxygen := GameConfig.OXYGEN_MAX
 var current := GameConfig.OXYGEN_MAX
 var _drowning := false
 
 
 func _ready() -> void:
-	oxygen_changed.emit(current, GameConfig.OXYGEN_MAX)
+	oxygen_changed.emit(current, max_oxygen)
 
 
 func _process(delta: float) -> void:
@@ -37,7 +39,7 @@ func _process(delta: float) -> void:
 		player.drown(GameConfig.OXYGEN_DROWN_DPS * delta)
 		return
 	current = maxf(current - GameConfig.OXYGEN_DRAIN * delta, 0.0)
-	oxygen_changed.emit(current, GameConfig.OXYGEN_MAX)
+	oxygen_changed.emit(current, max_oxygen)
 	if current <= 0.0:
 		_drowning = true
 		drowning_changed.emit(true)
@@ -46,8 +48,19 @@ func _process(delta: float) -> void:
 ## Alongside is the only place the tanks can be filled, which is what makes the
 ## harbour worth the swim back rather than a convenience stop.
 func refill() -> void:
-	current = GameConfig.OXYGEN_MAX
-	oxygen_changed.emit(current, GameConfig.OXYGEN_MAX)
+	current = max_oxygen
+	oxygen_changed.emit(current, max_oxygen)
 	if _drowning:
 		_drowning = false
 		drowning_changed.emit(false)
+
+
+## A bigger tank, delivered partly topped up. The refit bay sells seconds of
+## capacity; the air in the new section is there the moment it is fitted.
+func expand_tank(capacity: float) -> void:
+	if capacity <= max_oxygen:
+		return
+	var gained := capacity - max_oxygen
+	max_oxygen = capacity
+	current = mini(current + gained, max_oxygen)
+	oxygen_changed.emit(current, max_oxygen)

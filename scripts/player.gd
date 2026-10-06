@@ -16,6 +16,14 @@ signal died(player: Node2D)
 @export var max_hp := GameConfig.PLAYER_MAX_HP
 @export var max_ammo := GameConfig.PLAYER_MAX_AMMO
 
+## Top speed, raised by the refit bay. Everything inertial derives from it,
+## so the accel and brake figures keep meaning what the config says they do.
+var max_speed := GameConfig.PLAYER_MAX_SPEED
+var _accel := GameConfig.PLAYER_ACCEL
+var _decel := GameConfig.PLAYER_DECEL
+var _thrust := GameConfig.PLAYER_THRUST
+var _reverse_thrust := GameConfig.PLAYER_REVERSE_THRUST
+
 var hp: int
 var ammo: int
 ## Salvage collected. Survives nothing right now: dying ends the run.
@@ -59,6 +67,7 @@ func _ready() -> void:
 	hp_changed.emit(hp, max_hp)
 	ammo_changed.emit(ammo, max_ammo)
 	gold_changed.emit(gold)
+	_recompute_engine()
 	queue_redraw()
 
 
@@ -104,16 +113,16 @@ func _read_input(delta: float) -> void:
 
 	var forward := Vector2.RIGHT.rotated(rotation)
 	if Input.is_action_pressed("thrust"):
-		velocity += forward * GameConfig.PLAYER_THRUST * delta
+		velocity += forward * (_thrust * delta)
 	elif Input.is_action_pressed("reverse"):
-		velocity -= forward * GameConfig.PLAYER_REVERSE_THRUST * delta
+		velocity -= forward * (_reverse_thrust * delta)
 
 	# Passive drag doubles as engine braking, and it applies whether or not the
 	# screw is turning: a flat deceleration the whole way down, rather than an
 	# exponential tail still trickling along ten seconds after you let go.
-	velocity = velocity.move_toward(Vector2.ZERO, GameConfig.PLAYER_DECEL * delta)
+	velocity = velocity.move_toward(Vector2.ZERO, _decel * delta)
 	# The hull's ceiling, in either direction.
-	velocity = velocity.limit_length(GameConfig.PLAYER_MAX_SPEED)
+	velocity = velocity.limit_length(max_speed)
 
 
 func _resolve_contact_damage() -> void:
@@ -225,6 +234,45 @@ func repair(amount: int) -> int:
 	hp += healed
 	hp_changed.emit(hp, max_hp)
 	return healed
+
+
+## The refit yard welds on plating. The new section arrives intact, so the
+## hull heals by the increase — capped below the new ceiling like any heal.
+func set_hull_capacity(capacity: int) -> void:
+	if capacity <= max_hp:
+		return
+	var gained := capacity - max_hp
+	max_hp = capacity
+	hp = mini(hp + gained, max_hp)
+	hp_changed.emit(hp, max_hp)
+
+
+## A larger magazine, delivered fully stowed.
+func set_ammo_capacity(capacity: int) -> void:
+	if capacity <= max_ammo:
+		return
+	max_ammo = capacity
+	ammo = capacity
+	ammo_changed.emit(ammo, max_ammo)
+	fire_state_changed.emit()
+
+
+## A stronger screw. Every speed below derives off top speed, so raising it
+## lifts the whole curve and the accel/brake times from the config still hold.
+func set_speed_level(level: int) -> void:
+	max_speed = GameConfig.PLAYER_MAX_SPEED * (
+		1.0 + GameConfig.REFIT_SPEED_STEP * level)
+	_recompute_engine()
+
+
+## Derives the engine numbers from top speed, mirroring the config's own
+## arithmetic so PLAYER_ACCEL_TIME and PLAYER_BRAKE_TIME mean the same thing
+## they always did. Astern stays the same weak fraction of ahead.
+func _recompute_engine() -> void:
+	_accel = max_speed / GameConfig.PLAYER_ACCEL_TIME
+	_decel = max_speed / GameConfig.PLAYER_BRAKE_TIME
+	_thrust = _accel + _decel
+	_reverse_thrust = _accel * GameConfig.PLAYER_REVERSE_FRACTION + _decel
 
 
 ## One slot's contents, with the bounds handled here rather than by every reader.

@@ -19,6 +19,9 @@ var cooldown := 0.0
 ## `mode` is only what the HUD reports, and is derived from this and from whether
 ## a ring happens to be in flight.
 var continuous := false
+## How far a ping sweeps, extended by the refit bay. Defaults to the config
+## number, which the radar maps to its own disc.
+var max_range := GameConfig.SONAR_MAX_RANGE
 
 ## Fish -> remaining contact time. Keyed by node instance.
 var contacts: Dictionary = {}
@@ -82,7 +85,7 @@ func _passive_scan(_delta: float) -> void:
 		# Occasional unprompted blip, so idling is never fully safe. Only for
 		# fish already within hydrophone range, otherwise every fish in the
 		# world ticks a contact off on its own timer.
-		if dist <= GameConfig.SONAR_MAX_RANGE:
+		if dist <= max_range:
 			if not _blip_at.has(enemy) or now >= float(_blip_at[enemy]):
 				_blip_at[enemy] = now + _rng.randf_range(GameConfig.SONAR_BLIP_MIN, GameConfig.SONAR_BLIP_MAX)
 				reveal(enemy, GameConfig.SONAR_BLIP_DURATION)
@@ -153,14 +156,22 @@ func _build_ring() -> SonarRing:
 	if scene != null:
 		var instance := scene.instantiate() as SonarRing
 		if instance != null:
-			instance.max_radius = GameConfig.SONAR_MAX_RANGE
+			instance.max_radius = max_range
 			instance.speed = GameConfig.SONAR_PING_SPEED
 			return instance
 	push_error("Sonar: could not instantiate %s, falling back to bare ring." % RING_SCENE)
 	var bare := SonarRing.new()
-	bare.max_radius = GameConfig.SONAR_MAX_RANGE
+	bare.max_radius = max_range
 	bare.speed = GameConfig.SONAR_PING_SPEED
 	return bare
+
+
+## A bigger array sweeps further. Called by the refit bay; the radar reads the
+## same number, so the disc and the sweep never disagree.
+func expand_range(new_range: float) -> void:
+	if new_range <= max_range:
+		return
+	max_range = new_range
 
 
 ## A ping gives the enemy a bearing, not a target. Fish and crabs are only

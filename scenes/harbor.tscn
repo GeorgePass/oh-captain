@@ -68,19 +68,19 @@ anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
 offset_left = -260.0
-offset_top = -255.0
+offset_top = 0.0
 offset_right = 260.0
-offset_bottom = 255.0
+offset_bottom = 0.0
 grow_horizontal = 2
 grow_vertical = 2
 
 [node name="Box" type="VBoxContainer" parent="HarborScreen/Panel"]
-theme_override_constants/separation = 8
+theme_override_constants/separation = 6
 
 [node name="Title" type="Label" parent="HarborScreen/Panel/Box"]
 text = "HARBOR"
 horizontal_alignment = 1
-theme_override_font_sizes/font_size = 30
+theme_override_font_sizes/font_size = 26
 
 [node name="Stats" type="Label" parent="HarborScreen/Panel/Box"]
 text = "SALVAGE  0      HULL  50 / 50      TORPEDOES  20 / 20"
@@ -134,6 +134,78 @@ custom_minimum_size = Vector2(110, 36)
 focus_mode = 0
 disabled = true
 text = "SELL"
+
+[node name="RefitTitle" type="Label" parent="HarborScreen/Panel/Box"]
+theme_override_font_sizes/font_size = 18
+text = "REFIT"
+
+[node name="RefitRows" type="VBoxContainer" parent="HarborScreen/Panel/Box"]
+theme_override_constants/separation = 4
+
+[node name="OxygenRow" type="HBoxContainer" parent="HarborScreen/Panel/Box/RefitRows"]
+theme_override_constants/separation = 10
+
+[node name="Name" type="Label" parent="HarborScreen/Panel/Box/RefitRows/OxygenRow"]
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 13
+text = "OXYGEN TANK  Lv 0/5  —  +45 s air"
+
+[node name="Buy" type="Button" parent="HarborScreen/Panel/Box/RefitRows/OxygenRow"]
+custom_minimum_size = Vector2(80, 26)
+focus_mode = 0
+text = "15 g"
+
+[node name="HullRow" type="HBoxContainer" parent="HarborScreen/Panel/Box/RefitRows"]
+theme_override_constants/separation = 10
+
+[node name="Name" type="Label" parent="HarborScreen/Panel/Box/RefitRows/HullRow"]
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 13
+text = "HULL PLATING  Lv 0/5  —  +15 hull"
+
+[node name="Buy" type="Button" parent="HarborScreen/Panel/Box/RefitRows/HullRow"]
+custom_minimum_size = Vector2(80, 26)
+focus_mode = 0
+text = "20 g"
+
+[node name="TorpedoRow" type="HBoxContainer" parent="HarborScreen/Panel/Box/RefitRows"]
+theme_override_constants/separation = 10
+
+[node name="Name" type="Label" parent="HarborScreen/Panel/Box/RefitRows/TorpedoRow"]
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 13
+text = "TORPEDO MAG  Lv 0/5  —  +8 torpedoes"
+
+[node name="Buy" type="Button" parent="HarborScreen/Panel/Box/RefitRows/TorpedoRow"]
+custom_minimum_size = Vector2(80, 26)
+focus_mode = 0
+text = "8 g"
+
+[node name="SonarRow" type="HBoxContainer" parent="HarborScreen/Panel/Box/RefitRows"]
+theme_override_constants/separation = 10
+
+[node name="Name" type="Label" parent="HarborScreen/Panel/Box/RefitRows/SonarRow"]
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 13
+text = "SONAR ARRAY  Lv 0/5  —  +200 m range"
+
+[node name="Buy" type="Button" parent="HarborScreen/Panel/Box/RefitRows/SonarRow"]
+custom_minimum_size = Vector2(80, 26)
+focus_mode = 0
+text = "26 g"
+
+[node name="SpeedRow" type="HBoxContainer" parent="HarborScreen/Panel/Box/RefitRows"]
+theme_override_constants/separation = 10
+
+[node name="Name" type="Label" parent="HarborScreen/Panel/Box/RefitRows/SpeedRow"]
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 13
+text = "SCREW DRIVE  Lv 0/5  —  +12% top speed"
+
+[node name="Buy" type="Button" parent="HarborScreen/Panel/Box/RefitRows/SpeedRow"]
+custom_minimum_size = Vector2(80, 26)
+focus_mode = 0
+text = "32 g"
 
 [node name="MissionTitle" type="Label" parent="HarborScreen/Panel/Box"]
 theme_override_font_sizes/font_size = 18
@@ -189,7 +261,7 @@ theme_override_font_sizes/font_size = 13
 modulate = Color(0.6, 1.0, 0.94, 0.85)
 
 [node name="Launch" type="Button" parent="HarborScreen/Panel/Box"]
-custom_minimum_size = Vector2(0, 48)
+custom_minimum_size = Vector2(0, 44)
 focus_mode = 0
 text = "LAUNCH  [H]"
 
