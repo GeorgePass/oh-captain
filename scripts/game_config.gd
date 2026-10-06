@@ -181,17 +181,25 @@ const ENEMY_SEARCH_RADIUS := 90.0 * VIEW_SCALE
 ## casting about rather than orbiting, and per-creature phased so a shoal does
 ## not fan out in step.
 const ENEMY_SEARCH_SWEEP_RATE := 1.6
-## An enemy at or below one third of its HP gives up and runs for it.
+## An enemy at or below one third of its HP gives up and runs for it. Compared
+## as a multiplication rather than `hp <= max_hp / 3`, because integer division
+## rounds a third of a small animal down to nothing and quietly switches its
+## nerve off.
 const ENEMY_FLEE_HP_DIVISOR := 3
 ## Fleeing speed, deliberately below the hull's top speed: a fish that bolts has
 ## to stay catchable, or a five HP fish becomes permanently unkillable.
 const ENEMY_FLEE_SPEED := 130.0 * SPEED_SCALE
-## Anything cowardly bolts outright when something dies this close by. Bigger
-## than the earshot that hides the hull in the first place, so a kill is heard
-## well before the hull ever is.
+## How close a death has to be before it draws attention. Bigger than the
+## earshot that hides the hull in the first place, so a kill is heard well
+## before the hull ever is.
 const ENEMY_FLEE_PANIC_RADIUS := 260.0 * VIEW_SCALE
 ## How long it keeps searching before reverting to passive.
 const ENEMY_ALERT_TIMEOUT := 7.0
+## Past this the hull stops being worth chasing or hiding from, and an alert or
+## committed creature goes back to drifting. Set beyond the sonar on purpose: a
+## ping at maximum range has to survive long enough to be investigated, or the
+## radar would cancel its own discovery.
+const ENEMY_GIVE_UP_RANGE := SONAR_MAX_RANGE * 1.5
 ## Swimming sounds, as a gap between rustles. This is how a creature you have
 ## not pinged can still give itself away.
 const ENEMY_SWIM_MIN_GAP := 2.5

@@ -4,11 +4,14 @@ extends CharacterBody2D
 ##
 ## Four states. PASSIVE drifts and ignores the hull entirely. ALERT has a rough
 ## idea where the player is and moves to look, but has not seen them. HOSTILE
-## has the player and closes in. FLEEING gives up and runs for open water, which
-## is terminal: a broken enemy that decides to leave does not change its mind.
+## has the player and closes in. FLEEING gives up and runs for open water.
 ##
-## A sonar ping only ever produces ALERT: noise gives a bearing, it does not give
-## a target, so a pinged fish still has to spot the hull before it commits.
+## Two rules run through all of it. Noise never starts a fight: a ping, or a
+## death nearby, only ever produces ALERT, because a bearing is not a target.
+## And what decides seeing the hull is health, not temperament — a fish that has
+## never been touched still comes for you, and one that has been hurt runs.
+## FLEEING is not terminal either: a creature that bolts can turn and fight if
+## it is healthy enough and sees you again, and it drifts again once you are gone.
 
 enum State { PASSIVE, ALERT, HOSTILE, FLEEING }
 
@@ -95,9 +98,14 @@ func _ready() -> void:
 
 func _physics_process(delta: float) -> void:
 	_lock_grace = maxf(_lock_grace - delta, 0.0)
+	_give_up_if_out_of_range()
 	match state:
 		State.FLEEING:
 			_flee(delta)
+			# Bolting is not a hiding place. A creature that is hurt badly enough
+			# to run keeps running; one that was only grazed turns and fights if
+			# the hull stays on it long enough.
+			_check_detection(delta)
 		State.HOSTILE:
 			_chase(delta)
 		State.ALERT:
@@ -128,22 +136,27 @@ func _flee(delta: float) -> void:
 	rotation = lerp_angle(rotation, velocity.angle(), turn_rate * delta)
 
 
-## Called by Main when any enemy dies nearby. A coward bolts at the sight of it
-## regardless of how healthy it is; anything tougher carries on hunting. This is
-## what makes a kill dangerous to make in the wrong place, and it is deliberately
-## not tied to HP: there is no damage small enough to be survivable and still
-## leave a fish willing to stand its ground.
+## Called by Main when any enemy dies nearby. Something went off close enough to
+## be worth looking at, so everything in earshot goes to look — which is what
+## makes a kill dangerous to make in the wrong place.
+##
+## It does not scatter them. A death is an event, not a condition, and it stops
+## being true the moment the water closes over it; only something still true
+## next frame, like how hurt they are, is allowed to turn a creature around on
+## the spot. So this alerts rather than alarms, and if whoever arrives finds the
+## hull it is the health check that decides whether they fight or run.
 func on_neighbour_died(at: Vector2) -> void:
-	if state == State.FLEEING or not coward():
+	if state == State.HOSTILE or state == State.FLEEING:
 		return
 	if GameConfig.wrapped_delta(at, global_position).length() > GameConfig.ENEMY_FLEE_PANIC_RADIUS:
 		return
-	set_fleeing()
+	set_alert(at)
 
 
-## Terminal. Once an enemy decides to run it keeps running, and it can no longer
-## be alerted or committed: a creature that has given up on you cannot be talked
-## back into the fight by a ping.
+## Gives up on the hull and runs for open water. Not terminal: a healthy creature
+## that bolts can still turn and fight if it sees the hull again, and one that
+## has outrun the pursuit goes back to drifting on its own. A ping cannot call it
+## back, though — noise does not talk a broken animal out of leaving.
 func set_fleeing() -> void:
 	if state == State.FLEEING:
 		return
@@ -223,6 +236,11 @@ func _investigate(delta: float) -> void:
 
 	# A searching enemy can still hear the hull, and will escalate.
 	_check_detection(delta)
+	if state != State.ALERT:
+		# It just committed or bolted. Falling through would run this frame's
+		# search timeout against the state it has already left, cancelling a
+		# flee on the very frame it started.
+		return
 
 	_search_timer -= delta
 	if _search_timer <= 0.0:
@@ -230,6 +248,47 @@ func _investigate(delta: float) -> void:
 
 
 # --- Detection ---------------------------------------------------------------
+
+## Whether this creature, as it stands right now, runs rather than fights.
+##
+## Health, and only health. Health is the one answer that is still true on the
+## next frame, which is what makes it the right thing to consult when a creature
+## sees the hull: a fish that has never been touched is not a fish that wants to
+## be somewhere else, so it comes. Whether a species treats a fresh wound as
+## reason enough on its own is `coward()`, and that is only asked once something
+## has actually hit it.
+func _wants_flee() -> bool:
+	return hp * GameConfig.ENEMY_FLEE_HP_DIVISOR <= max_hp
+
+
+## The single place where seeing the hull becomes a decision. Both routes in —
+## hearing it during a search, and noticing it while drifting — come through
+## here, so there is one answer to "does it come for me" rather than two that can
+## drift apart.
+func _commit_or_flee() -> void:
+	if _wants_flee():
+		set_fleeing()
+	else:
+		set_hostile()
+
+
+## Stops caring once the hull is out of reach, from any committed state.
+##
+## Without this a chase never ends. The water wraps, so a hostile fish will follow
+## you round the map indefinitely and one torpedo stops meaning anything; the
+## crab was meant to be a threat you cannot simply outrun *and forget*, not one
+## that runs you down forever. Measured past the sonar so that a ping at maximum
+## range still has its search to run.
+func _give_up_if_out_of_range() -> void:
+	if state == State.PASSIVE:
+		return
+	var player := get_player()
+	if player == null or not is_instance_valid(player):
+		return
+	var d := GameConfig.wrapped_delta(global_position, player.global_position).length()
+	if d > GameConfig.ENEMY_GIVE_UP_RANGE:
+		set_passive()
+
 
 ## Stealth: a fish only hears the hull if it is close, unobstructed, and the
 ## player has been loud for a moment. Sprinting roughly doubles earshot, so
@@ -256,7 +315,7 @@ func _check_detection(delta: float) -> void:
 	_alert_timer += delta
 	_last_known = player.global_position
 	if _alert_timer >= GameConfig.FISH_ALERT_DELAY:
-		set_hostile()
+		_commit_or_flee()
 
 
 ## Reefs between the hull and the enemy muffle it, same as they block the ping.
@@ -286,8 +345,13 @@ func set_alert(approx_player_pos: Vector2 = Vector2.INF) -> void:
 
 
 ## Has actually seen the hull. From here it tracks the player directly.
+##
+## Reachable from FLEEING: a creature that ran can turn round, and it is the
+## health check in `_commit_or_flee` that keeps a badly broken one running. The
+## gate is deliberately not in here, so there is a single answer to whether
+## seeing the player means fight or flight.
 func set_hostile() -> void:
-	if state == State.HOSTILE or state == State.FLEEING:
+	if state == State.HOSTILE:
 		return
 	state = State.HOSTILE
 	if velocity.length() < passive_speed:
@@ -306,9 +370,10 @@ func _cry(urgent: bool) -> void:
 		global_position, GameConfig.VOL_ENEMY)
 
 
+## Back to drifting. Also how a run ends: once the hull is out of reach there is
+## nothing left to run from, so a fleeing creature settles again rather than
+## spending the rest of the dive bolting at empty water.
 func set_passive() -> void:
-	if state == State.FLEEING:
-		return
 	state = State.PASSIVE
 	_alert_timer = 0.0
 	_search_timer = 0.0
@@ -359,9 +424,10 @@ func profile() -> Species.Profile:
 	return _profile
 
 
-## Whether this creature gives up rather than fight it out. Fish are cowards:
-## one hit of any size and they run, and a kill nearby is enough on its own.
-## The armoured things have to be worn down before they break.
+## Whether a wound is reason enough to run on its own, whatever the health left.
+## Fish are cowards in that sense: one hit of any size and they go. It is asked
+## only once something has actually hit them — seeing the hull is decided by
+## health, not by this. The armoured things have to be worn down first.
 func coward() -> bool:
 	return false
 
@@ -398,14 +464,16 @@ func take_damage(amount: int) -> void:
 		queue_free()
 		return
 
-	# Hurt and still breathing: a coward abandons the fight outright, anything
-	# else turns on whoever did it. Checked before `set_hostile` so a fish that
-	# is about to run does not also shriek a hunting cry it never means.
-	if coward() or hp <= max_hp / GameConfig.ENEMY_FLEE_HP_DIVISOR:
+	# Hurt and still breathing. A species that bolts at any wound goes straight
+	# out; everything else asks the same question sight asks, because a hit is
+	# just health plus an attacker and health is what the answer is made of.
+	# Checked before the commit so a fish about to run does not also shriek a
+	# hunting cry it never means.
+	if coward():
 		set_fleeing()
 		return
 	# Taking a hit always gives away where the attacker is.
-	set_hostile()
+	_commit_or_flee()
 
 
 ## Scatters coins and, sometimes, a torpedo crate where the enemy died.
