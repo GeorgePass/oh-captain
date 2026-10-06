@@ -180,7 +180,8 @@ func _on_ring_reached(enemy: SeaEnemy) -> void:
 			_ping_origin, enemy.global_position):
 		return
 	reveal(enemy, GameConfig.SONAR_CONTACT_DURATION)
-	# Jitter the fix so an alerted search converges on the area, not the hull.
+	# The fix is deliberately off the origin rather than on it — see
+	# SONAR_PING_SEARCH_SPREAD — but off by less than the area it will search.
 	var spread := Vector2.from_angle(_rng.randf() * TAU) * GameConfig.SONAR_PING_SEARCH_SPREAD
 	# Folded back inside the water: the spread can carry the fix past an edge, and
 	# an un-wrapped guess makes the search walk the long way round to reach it.

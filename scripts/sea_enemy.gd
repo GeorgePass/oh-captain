@@ -6,10 +6,13 @@ extends CharacterBody2D
 ## idea where the player is and moves to look, but has not seen them. HOSTILE
 ## has the player and closes in. FLEEING gives up and runs for open water.
 ##
-## Two rules run through all of it. Noise never starts a fight: a ping, or a
-## death nearby, only ever produces ALERT, because a bearing is not a target.
-## And what decides seeing the hull is health, not temperament — a fish that has
-## never been touched still comes for you, and one that has been hurt runs.
+## Two rules run through all of it. Sound and sight are kept apart: a noise puts
+## a creature on ALERT pointed at where it came from and can go no further, while
+## distance held for a moment is what makes it HOSTILE. A bearing is not a
+## target, so nothing that makes a noise — a ping, a launch, a death nearby —
+## can start a fight on its own. And what decides the fight once it is seen is
+## health, not temperament: a fish that has never been touched still comes for
+## you, and one that has been hurt runs.
 ## FLEEING is not terminal either: a creature that bolts can turn and fight if
 ## it is healthy enough and sees you again, and it drifts again once you are gone.
 
@@ -53,13 +56,16 @@ var locked := false
 
 var _wander_dir := Vector2.RIGHT
 var _wander_timer := 0.0
-## Seconds spent hearing the hull without breaking off.
-var _alert_timer := 0.0
-## Where an ALERT enemy thinks the player is. Set by a ping, refined by
-## hearing, and searched on arrival.
+## Where an ALERT enemy thinks the sound came from. Set by a ping, by a launch,
+## or by hearing the hull, and searched on arrival.
 var _last_known := Vector2.ZERO
-## Counts down while searching; on zero the enemy gives up and drifts again.
+## Linger budget for the place the sound came from. Armed on every new sound,
+## but it only drains once the creature has actually arrived — see `_investigate`.
 var _search_timer := 0.0
+## Seconds of the hull staying in sight, accumulated while it is inside sight
+## range and cleared the moment it is not. Reaching `FISH_SIGHT_DELAY` is what
+## turns a sighting into a decision; hearing never touches this.
+var _sight_timer := 0.0
 ## Random phase so a group of alerted enemies does not sweep in lockstep.
 var _sweep_seed := 0.0
 ## Counts down to the next swimming sound. This is deliberately the only way to
@@ -104,15 +110,15 @@ func _physics_process(delta: float) -> void:
 			_flee(delta)
 			# Bolting is not a hiding place. A creature that is hurt badly enough
 			# to run keeps running; one that was only grazed turns and fights if
-			# the hull stays on it long enough.
-			_check_detection(delta)
+			# the hull stays in sight long enough.
+			_check_senses(delta)
 		State.HOSTILE:
 			_chase(delta)
 		State.ALERT:
 			_investigate(delta)
 		_:
 			_drift(delta)
-			_check_detection(delta)
+			_check_senses(delta)
 	move_and_slide()
 	_wrap_world()
 	_tick_swim(delta)
@@ -161,7 +167,7 @@ func set_fleeing() -> void:
 	if state == State.FLEEING:
 		return
 	state = State.FLEEING
-	_alert_timer = 0.0
+	_sight_timer = 0.0
 	_search_timer = 0.0
 	# Retiring, not attacking: a clean run for it rather than a last screech.
 	velocity = velocity.normalized() * maxf(velocity.length(), passive_speed)
@@ -217,14 +223,22 @@ func _chase(delta: float) -> void:
 	rotation = lerp_angle(rotation, velocity.angle(), turn_rate * delta)
 
 
-## Moves to the last known position, then casts about nearby before giving up.
-## This is the state a ping produces: purposeful, but blind.
+## Moves to where the sound came from, then casts about nearby before giving up.
+## This is the state a ping or a launch produces: purposeful, but blind.
+##
+## The linger budget drains only once the creature has actually arrived. A sound
+## across the map buys the whole swim to it — counting down from the alert spent
+## the budget on the journey, so a long-range investigation always handed back a
+## creature that had never reached the place it was sent to look at.
 func _investigate(delta: float) -> void:
 	var goal := _last_known
-	# Within a short leash of the guess, sweep a small circle instead of
-	# sitting still, so it reads as searching rather than loitering.
-	var offset := GameConfig.wrapped_delta(_last_known, global_position)
-	if offset.length() < GameConfig.ENEMY_SEARCH_RADIUS:
+	# Within a short leash of the sound, sweep a small circle instead of
+	# sitting still, so it reads as searching rather than loitering. This same
+	# leash is what counts as arriving.
+	var arrived := GameConfig.wrapped_delta(_last_known, global_position) \
+		.length() < GameConfig.ENEMY_SEARCH_RADIUS
+	if arrived:
+		_search_timer -= delta
 		_sweep_phase += delta * GameConfig.ENEMY_SEARCH_SWEEP_RATE
 		var sweep := Vector2.from_angle(_sweep_phase + _sweep_seed)
 		goal = _last_known + sweep * GameConfig.ENEMY_SEARCH_RADIUS * 0.6
@@ -234,16 +248,15 @@ func _investigate(delta: float) -> void:
 		velocity = velocity.lerp(to_goal.normalized() * GameConfig.ENEMY_ALERT_SPEED, accel * delta)
 		rotation = lerp_angle(rotation, velocity.angle(), turn_rate * delta)
 
-	# A searching enemy can still hear the hull, and will escalate.
-	_check_detection(delta)
+	# A searching creature is still listening and looking while it works, and
+	# either one can end the search early by finding what it came for.
+	_check_senses(delta)
 	if state != State.ALERT:
 		# It just committed or bolted. Falling through would run this frame's
-		# search timeout against the state it has already left, cancelling a
+		# linger budget against the state it has already left, cancelling a
 		# flee on the very frame it started.
 		return
-
-	_search_timer -= delta
-	if _search_timer <= 0.0:
+	if arrived and _search_timer <= 0.0:
 		set_passive()
 
 
@@ -290,31 +303,49 @@ func _give_up_if_out_of_range() -> void:
 		set_passive()
 
 
-## Stealth: a fish only hears the hull if it is close, unobstructed, and the
-## player has been loud for a moment. Sprinting roughly doubles earshot, so
-## going fast is the thing that gives you away, not simply existing.
-## Only reachable from PASSIVE and ALERT, so a committed enemy never un-commits.
-func _check_detection(delta: float) -> void:
+## The two senses, side by side, because they answer different questions.
+##
+## Hearing asks whether something is making noise nearby and, if so, points the
+## creature at the source. It reaches further when the hull is loud, reefs block
+## it, and it can do no more than put a creature on ALERT: a bearing is not a
+## target, so hearing on its own never raises anything.
+##
+## Sight asks whether the hull is right there, and distance held for a moment is
+## the only thing that has ever made a creature commit. An alert creature sees
+## further than a resting one because it is looking, which is the whole
+## difference between a search that finds what it was sent for and one that
+## walks to the noise, glances around from too far away, and gives up.
+##
+## Reached from PASSIVE, ALERT and FLEEING — a committed enemy is never asked,
+## it already has what it came for.
+func _check_senses(delta: float) -> void:
 	var player := get_player()
 	if player == null:
 		return
 	var dist := GameConfig.wrapped_delta(global_position, player.global_position).length()
+
+	# Hearing. Tracked continuously rather than accumulated: a hull rustling
+	# this close is already a signal worth acting on, and the fix it leaves is
+	# exact because a local sound tells you precisely where it is.
 	var earshot := GameConfig.FISH_EARSHOT_RADIUS
 	if player.velocity.length() >= GameConfig.FAST_SPEED:
 		earshot *= GameConfig.FISH_EARSHOT_SPRINT_MULT
+	var audible := dist <= earshot
+	if audible and GameConfig.FISH_HEARING_BLOCKED_BY_REEF:
+		audible = not _muted_by_reef(player.global_position)
+	if audible:
+		set_alert(player.global_position)
 
-	if dist > earshot:
-		_alert_timer = 0.0
+	# Sight. Reaching the delay is a decision; falling out of range wipes it, so
+	# a hull that crosses the edge is seen without being dwelt on.
+	var sight := GameConfig.FISH_SIGHT_RADIUS
+	if state == State.ALERT:
+		sight *= GameConfig.FISH_SIGHT_ALERT_MULT
+	if dist > sight:
+		_sight_timer = 0.0
 		return
-	if GameConfig.FISH_HEARING_BLOCKED_BY_REEF and _muted_by_reef(player.global_position):
-		_alert_timer = 0.0
-		return
-
-	# Linger in the open and the enemy works out something is there. Heard
-	# bearing is refined as it goes, so a searching enemy homes in a little.
-	_alert_timer += delta
-	_last_known = player.global_position
-	if _alert_timer >= GameConfig.FISH_ALERT_DELAY:
+	_sight_timer += delta
+	if _sight_timer >= GameConfig.FISH_SIGHT_DELAY:
 		_commit_or_flee()
 
 
@@ -324,9 +355,32 @@ func _muted_by_reef(player_pos: Vector2) -> bool:
 		global_position, player_pos)
 
 
+# --- Sound -------------------------------------------------------------------
+
+## Everything that makes a noise in the water goes through here: a ping, a
+## torpedo launch, and anything added later. It points whatever is close enough
+## at the origin and puts it on ALERT, and that is the whole of it — sound is a
+## bearing, never a target, so no action the player can take will ever commit a
+## creature on its own. What finds you is being seen after you have arrived.
+##
+## Callers keep their own occlusion rather than this carrying any. A ping checks
+## for reefs because a ring has a real path across the water to be blocked
+## along; a launch is a bang that arrives wherever it arrives.
+static func hear_noise(tree: SceneTree, at: Vector2, radius: float) -> void:
+	if tree == null:
+		return
+	for n in tree.get_nodes_in_group(GROUP):
+		var enemy := n as SeaEnemy
+		if enemy == null or not is_instance_valid(enemy):
+			continue
+		if GameConfig.wrapped_delta(at, enemy.global_position).length() > radius:
+			continue
+		enemy.set_alert(at)
+
+
 # --- State changes -----------------------------------------------------------
 
-## A ping or a near miss: something is out there, go and look. Deliberately
+## A sound made somewhere: something is out there, go and look. Deliberately
 ## not hostile, so noise alone can never start a fight.
 func set_alert(approx_player_pos: Vector2 = Vector2.INF) -> void:
 	if state == State.HOSTILE or state == State.FLEEING:
@@ -375,7 +429,7 @@ func _cry(urgent: bool) -> void:
 ## spending the rest of the dive bolting at empty water.
 func set_passive() -> void:
 	state = State.PASSIVE
-	_alert_timer = 0.0
+	_sight_timer = 0.0
 	_search_timer = 0.0
 
 

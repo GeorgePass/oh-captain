@@ -145,8 +145,13 @@ const SONAR_COOLDOWN := 8.0
 ## than the ping cooldown, so a continuous sweep does not flicker.
 const SONAR_CONTACT_DURATION := 16.0
 ## How far off the true hull position a ping places an alerted enemy's search.
-## Without this, searching a pinged area would walk straight to the player.
-const SONAR_PING_SEARCH_SPREAD := 220.0
+## Deliberately kept well inside ENEMY_SEARCH_RADIUS (90.0 against 120.0):
+## a search narrower than its own error is a search of the wrong patch of water,
+## so this used to stand off further than the creature was ever willing to walk,
+## and it arrived, looked around from outside its own sight range, and gave up
+## without finding anything. It still does not point at the hull — the player has
+## had the whole approach to leave, which is what this protects.
+const SONAR_PING_SEARCH_SPREAD := 90.0
 ## Fish this close are picked up by the passive hydrophone set, no ping needed.
 const SONAR_PROXIMITY_RADIUS := 180.0 * VIEW_SCALE
 const SONAR_FAST_ENEMY_SPEED := 150.0 * SPEED_SCALE
@@ -155,17 +160,45 @@ const SONAR_BLIP_MAX := 14.0
 const SONAR_BLIP_DURATION := 1.2
 
 # --- Stealth ---
-## Earshot. Only fish this close notice the hull at all, and only if nothing
+# Sound and sight are two different questions with two different answers, and
+# they are deliberately kept apart here. Sound is a bearing: it can point a
+# creature at a noise and put it on ALERT, and it can never start a fight.
+# Sight is distance held for a moment, and it is the only thing that ever makes
+# a creature HOSTILE. Nothing that makes a noise is able to commit on its own.
+
+## Earshot. Only creatures this close hear the hull at all, and only if nothing
 ## solid is in the way.
 const FISH_EARSHOT_RADIUS := 110.0
 ## How much further a sprinting hull carries. Sprinting is the tradeoff: pace
-## for concealment.
+## for concealment. It widens what they hear, never what they see — going fast
+## tells them where to look, it does not let them see further than they could.
 const FISH_EARSHOT_SPRINT_MULT := 2.2
-## The hull must stay inside earshot this long before a fish commits. Lets you
-## slip past a patrol if you go quiet, and punishes loitering in the open.
-const FISH_ALERT_DELAY := 0.9
-## Reefs block sound as well as sight: a fish will not hear you through one.
+## Reefs block sound: a fish will not hear you through one. They do not block
+## sight, because there is no line of sight in this game — only distance — so a
+## reef is cover from noise rather than from a creature close enough to look.
+## The distinction earns its keep above earshot, where sprinting (242) is heard
+## further than anything can be seen (110).
 const FISH_HEARING_BLOCKED_BY_REEF := true
+
+## Sight. Distance from the hull at which a creature can see it, and therefore
+## the only thing that raises PASSIVE or ALERT to HOSTILE. Kept equal to
+## earshot so that a creature close enough to hear is also close enough to see,
+## but it is a separate number on purpose: one of them is about noise and the
+## other is about being attacked.
+const FISH_SIGHT_RADIUS := 110.0
+## An alert creature is searching rather than drifting, so it is looking, and
+## looking further is the entire difference between a searching enemy and a
+## resting one. Without it a creature that walks to a pinged area looks around
+## from further off than it thinks it has, gives up on arrival, and never finds
+## the thing it was sent to investigate.
+const FISH_SIGHT_ALERT_MULT := 1.6
+## The hull must stay inside sight this long before a creature commits. Lets you
+## slip past a patrol if you move, and punishes loitering in the open.
+const FISH_SIGHT_DELAY := 0.9
+## How far a torpedo launch carries. A launch is a bang rather than a rustle, so
+## it reaches further than the hull's own noise does, and that is the price of
+## firing: it hands a bearing to everything in range.
+const ENEMY_LAUNCH_HEARING_RADIUS := 420.0
 
 # --- Enemies ---
 ## Shared AI tuning. Fish and crabs differ in body stats, not behaviour, so the
@@ -175,7 +208,10 @@ const ENEMY_TURN_RATE := 4.0 * SPEED_SCALE
 const ENEMY_ACCEL := 5.5
 ## An ALERT enemy moves at a purposeful walk, well below a charge.
 const ENEMY_ALERT_SPEED := 62.0 * SPEED_SCALE
-## Radius it sweeps around the last known position before giving up.
+## Radius it sweeps around the place it was last heard. Also, and on purpose,
+## the radius that counts as having arrived: it is the working area around the
+## sound, so a creature standing anywhere inside it is already looking at the
+## right patch of water.
 const ENEMY_SEARCH_RADIUS := 90.0 * VIEW_SCALE
 ## How fast that sweep turns, in radians per second. Slow enough to read as
 ## casting about rather than orbiting, and per-creature phased so a shoal does
@@ -193,7 +229,11 @@ const ENEMY_FLEE_SPEED := 130.0 * SPEED_SCALE
 ## earshot that hides the hull in the first place, so a kill is heard well
 ## before the hull ever is.
 const ENEMY_FLEE_PANIC_RADIUS := 260.0 * VIEW_SCALE
-## How long it keeps searching before reverting to passive.
+## How long it lingers at the place it was sent to look before drifting back to
+## whatever it was doing. Counted from arrival, not from the moment it was
+## alerted: a ping at maximum range buys the time to swim there instead of a
+## fixed budget spent getting there, which is what used to make a long-range
+## investigation die out halfway across the water.
 const ENEMY_ALERT_TIMEOUT := 7.0
 ## Past this the hull stops being worth chasing or hiding from, and an alert or
 ## committed creature goes back to drifting. Set beyond the sonar on purpose: a

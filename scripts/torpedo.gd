@@ -27,6 +27,9 @@ func launch(from: Vector2, direction: Vector2) -> void:
 	velocity = direction.normalized() * speed
 	rotation = velocity.angle()
 	AudioDirector.play_at(get_tree(), &"torpedo_launch", from, GameConfig.VOL_TORPEDO)
+	# The bang is heard as well as heard of: launching is never silent, and
+	# that is what makes firing a decision rather than a free action.
+	SeaEnemy.hear_noise(get_tree(), from, GameConfig.ENEMY_LAUNCH_HEARING_RADIUS)
 
 
 func _physics_process(delta: float) -> void:
