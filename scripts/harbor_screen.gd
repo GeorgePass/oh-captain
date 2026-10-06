@@ -189,12 +189,18 @@ func _on_selection_changed(_index: int) -> void:
 	_sync_sell_row()
 
 
-## The dock key. Guarded on nothing: pressing it out at sea is a no-op, because
-## the harbour node decides whether the request means anything, and this screen
-## only ever reports that the key went down.
+## The dock key. Both dock screens hear it, but only the slip the hull is
+## actually facing may claim it: whichever screen is read first marks the event
+## handled, so a screen this slip is not near must leave the key alone rather
+## than swallow it. The harbour node still makes the call; this only gates
+## which screen reports it.
 func _unhandled_input(event: InputEvent) -> void:
 	if not event.is_pressed() or event.is_echo():
 		return
-	if event.is_action("dock"):
-		get_viewport().set_input_as_handled()
-		dock_toggled.emit()
+	if not event.is_action("dock"):
+		return
+	var dock := get_parent() as Harbor
+	if dock == null or not (dock.docked or dock.in_zone):
+		return
+	get_viewport().set_input_as_handled()
+	dock_toggled.emit()

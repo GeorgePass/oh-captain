@@ -33,9 +33,9 @@ func _ready() -> void:
 
 
 ## The screen reports the keypress; this decides what it was worth, exactly as
-## the harbour does. Both screens hear the dock key and both report it - each
-## node then decides against its own anchorage, so a press at one dock can
-## never raise the other's menu.
+## the harbour does. Each screen claims the dock key only for its own
+## anchorage - whichever screen the input order reads first swallows the event
+## for everyone after it, so the guard has to live at the screen, not here.
 func _on_dock_toggled() -> void:
 	if docked:
 		set_docked(false)

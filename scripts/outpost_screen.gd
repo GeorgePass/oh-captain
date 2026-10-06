@@ -46,11 +46,17 @@ func refresh() -> void:
 		note.text = _missions.outpost_note()
 
 
-## The dock key, reported exactly as the harbour screen reports it: the outpost
-## node decides whether the request means anything.
+## The dock key, reported exactly as the harbour screen reports it: claimed
+## only while the hull is alongside or inside this anchorage, because the
+## screen read first swallows the event for every screen read after it.
+## The outpost node still decides whether the request means anything.
 func _unhandled_input(event: InputEvent) -> void:
 	if not event.is_pressed() or event.is_echo():
 		return
-	if event.is_action("dock"):
-		get_viewport().set_input_as_handled()
-		dock_toggled.emit()
+	if not event.is_action("dock"):
+		return
+	var dock := get_parent() as Outpost
+	if dock == null or not (dock.docked or dock.in_zone):
+		return
+	get_viewport().set_input_as_handled()
+	dock_toggled.emit()
