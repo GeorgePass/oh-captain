@@ -12,8 +12,6 @@ func _init() -> void:
 	turn_rate = GameConfig.CRAB_TURN_RATE
 	accel = GameConfig.CRAB_ACCEL
 	contact_damage = GameConfig.CRAB_CONTACT_DMG
-	gold_min = GameConfig.CRAB_GOLD_MIN
-	gold_max = GameConfig.CRAB_GOLD_MAX
 
 
 ## Broad, low shell with a squared carapace and two raised claws, so the

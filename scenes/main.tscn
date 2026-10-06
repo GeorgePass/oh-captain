@@ -1,4 +1,4 @@
-[gd_scene load_steps=13 format=3]
+[gd_scene load_steps=14 format=3]
 
 [ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
 [ext_resource type="Script" path="res://scripts/hud.gd" id="2_hud"]
@@ -9,6 +9,7 @@
 [ext_resource type="Script" path="res://scripts/spawner.gd" id="7_spawner"]
 [ext_resource type="PackedScene" path="res://scenes/harbor.tscn" id="8_harbor"]
 [ext_resource type="Script" path="res://scripts/oxygen.gd" id="9_oxygen"]
+[ext_resource type="Script" path="res://scripts/inventory_panel.gd" id="10_cargo"]
 
 [node name="Main" type="Node2D"]
 script = ExtResource("1_main")
@@ -111,9 +112,9 @@ anchor_left = 0.5
 anchor_top = 1.0
 anchor_right = 0.5
 anchor_bottom = 1.0
-offset_left = -278.0
+offset_left = -358.0
 offset_top = -66.0
-offset_right = 278.0
+offset_right = 358.0
 offset_bottom = -26.0
 grow_horizontal = 2
 grow_vertical = 0
@@ -134,6 +135,20 @@ text = "Lock: 0  [Q]"
 custom_minimum_size = Vector2(170, 40)
 focus_mode = 0
 text = "Fire (20)  [E]"
+
+[node name="CargoButton" type="Button" parent="HUD/Controls"]
+custom_minimum_size = Vector2(170, 40)
+focus_mode = 0
+text = "Cargo  [I]"
+
+[node name="Inventory" type="Control" parent="HUD"]
+anchors_preset = 4
+anchor_top = 0.5
+anchor_right = 0.0
+anchor_bottom = 0.5
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("10_cargo")
 
 [node name="Drowning" type="ColorRect" parent="HUD"]
 anchors_preset = 15

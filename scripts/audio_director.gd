@@ -181,7 +181,7 @@ func _build_streams() -> void:
 	_streams[&"torpedo_hit_reef"] = Sfx.torpedo_hit_reef()
 	_streams[&"damage"] = Sfx.damage()
 	_streams[&"gold"] = Sfx.gold()
-	_streams[&"ammo"] = Sfx.ammo()
+	_streams[&"item"] = Sfx.item()
 	_streams[&"swim"] = Sfx.swim()
 	_streams[&"game_over"] = Sfx.game_over()
 	_streams[&"ambient"] = Sfx.ambient()

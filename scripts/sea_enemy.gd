@@ -42,8 +42,6 @@ signal hp_changed(hp: int, max_hp: int)
 @export var turn_rate := GameConfig.ENEMY_TURN_RATE
 @export var accel := GameConfig.ENEMY_ACCEL
 @export var contact_damage := GameConfig.FISH_CONTACT_DMG
-@export var gold_min := GameConfig.FISH_GOLD_MIN
-@export var gold_max := GameConfig.FISH_GOLD_MAX
 
 var hp: int
 var state: int = State.PASSIVE
@@ -530,26 +528,29 @@ func take_damage(amount: int) -> void:
 	_commit_or_flee()
 
 
-## Scatters coins and, sometimes, a torpedo crate where the enemy died.
-## Spawned into the shared pickup container rather than our own parent, so
-## wrecks and enemies both drop into one place that is easy to inspect.
+## Scatters whatever this species leaves behind, rolled once per drop in its own
+## table. Spawned into the shared pickup container rather than our own parent,
+## so wrecks and enemies both drop into one place that is easy to inspect.
+##
+## The table comes from the Profile, which is also where the creature got its
+## speed and its voice. Gold and torpedoes are deliberately not here any more:
+## a killed enemy gives you something to carry, and the harbour is where you
+## turn carrying into either.
 func _drop_loot() -> void:
 	var parent := get_tree().get_first_node_in_group(Pickup.GROUP) as Node
 	if parent == null:
 		parent = get_parent()
 	if parent == null:
 		return
-	var gold := _rng.randi_range(gold_min, gold_max)
-	var coins := clampi(gold / 3, 2, 5)
-	for i in coins:
-		var coin := Pickup.spawn(parent, global_position)
-		coin.amount = maxi(1, gold / coins)
-		coin.scatter()
-	if _rng.randf() < GameConfig.ENEMY_AMMO_CHANCE:
-		var crate := Pickup.spawn(parent, global_position)
-		crate.kind = Pickup.Kind.AMMO
-		crate.amount = GameConfig.ENEMY_AMMO_DROP
-		crate.scatter()
+	for drop in profile().drops:
+		if _rng.randf() >= drop.chance:
+			continue
+		var loot := Pickup.spawn(parent, global_position)
+		if loot == null:
+			continue
+		loot.kind = Pickup.Kind.ITEM
+		loot.item_id = drop.item
+		loot.scatter()
 
 
 func get_player() -> Player:

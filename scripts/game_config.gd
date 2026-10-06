@@ -142,6 +142,14 @@ const WRECK_GOLD_CHANCE := 0.65
 const WRECK_COINS_MIN := 2
 const WRECK_COINS_MAX := 5
 
+# --- Cargo ---
+## Slot grid for the cargo panel: two across, four down. This is layout, not a
+## cap on how many kinds of thing exist — widening the hold later is a change to
+## these two numbers, and the panel sizes itself from them.
+const INV_COLS := 2
+const INV_ROWS := 4
+const INV_CAPACITY := INV_COLS * INV_ROWS
+
 # --- Sight ---
 ## How far the captain can actually see, and therefore how far they can lock on.
 ## Plain radial distance, no cone and no line-of-sight test. Sonar reaches far
@@ -279,18 +287,12 @@ const ENEMY_SWIM_MIN_GAP := 2.5
 const ENEMY_SWIM_MAX_GAP := 6.5
 ## How far out a swimming sound is worth playing, as a multiple of earshot.
 const ENEMY_SWIM_AUDIBLE_MULT := 2.2
-## Ammunition dropped by a killed enemy. Gold is per species rather than a
-## single pair, because a crab is worth hunting and a fish is not.
-const ENEMY_AMMO_CHANCE := 0.35
-const ENEMY_AMMO_DROP := 4
 
 ## Fish: nimble and fragile. Quick to turn on you, dies to one torpedo, but
 ## barely scratches the hull.
 const FISH_MAX_HP := 5
 const FISH_CHARGE_SPEED := 175.0 * SPEED_SCALE
 const FISH_CONTACT_DMG := 4
-const FISH_GOLD_MIN := 2
-const FISH_GOLD_MAX := 5
 
 ## Crab: armoured and slow. Charges well below the hull's top speed, so it can
 ## always be shaken, but it takes three torpedoes and one hit hurts.
@@ -300,8 +302,6 @@ const CRAB_CHARGE_SPEED := 112.0 * SPEED_SCALE
 const CRAB_TURN_RATE := 2.0 * SPEED_SCALE
 const CRAB_ACCEL := 2.2
 const CRAB_CONTACT_DMG := 16
-const CRAB_GOLD_MIN := 12
-const CRAB_GOLD_MAX := 20
 
 # --- Torpedo ---
 ## Scaled down with the hull so it still outruns the boat it came from.

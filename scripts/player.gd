@@ -8,6 +8,7 @@ const TORPEDO_SCENE := "res://scenes/torpedo.tscn"
 signal hp_changed(hp: int, max_hp: int)
 signal ammo_changed(ammo: int, ammo_max: int)
 signal gold_changed(gold: int)
+signal inventory_changed()
 signal fire_state_changed()
 signal lock_changed(target: Node2D)
 signal died(player: Node2D)
@@ -19,6 +20,11 @@ var hp: int
 var ammo: int
 ## Salvage collected. Survives nothing right now: dying ends the run.
 var gold := 0
+## What the hull is carrying, as one entry per occupied slot, packed from the
+## front — so slot N is simply cargo[N] and an empty hold is an empty array.
+## A second stack of the same kind is a second entry, which is the only way a
+## grid of slots can mean anything.
+var cargo: Array[Item.Stack] = []
 var locked_target: Node2D = null
 var fire_cooldown := 0.0
 
@@ -200,7 +206,55 @@ func add_gold(amount: int) -> void:
 	gold_changed.emit(gold)
 
 
-## Clamped to max_ammo, so a crate cannot push the player over the cap.
+## Adds cargo, and reports whether all of it fit.
+##
+## All or nothing. A partial take would either quietly eat the remainder or
+## have to leave a second pickup behind, and both are ways of losing something
+## the captain never agreed to lose — so when the hold is full this changes
+## nothing and returns false, and the pickup stays in the water until a slot
+## comes free.
+func add_item(id: int, count: int) -> bool:
+	if not _fits(id, count):
+		return false
+	var limit := Item.get_def(id).stack
+	var left := count
+	# Top up stacks of this kind first, so filling a half-empty stack costs no
+	# slot and a hold that looks full still has room in what is in it.
+	for stack in cargo:
+		if left == 0:
+			break
+		if stack.id != id:
+			continue
+		var take := mini(limit - stack.count, left)
+		stack.count += take
+		left -= take
+	# Then open new stacks until the count or the grid runs out. Guaranteed to
+	# finish, because `_fits` has already counted the same room.
+	while left > 0:
+		var take := mini(limit, left)
+		cargo.append(Item.Stack.new(id, take))
+		left -= take
+	inventory_changed.emit()
+	return true
+
+
+## Room available for one kind: what is left in the stacks already holding it,
+## plus every slot not in use at that kind's own stack limit.
+func _fits(id: int, count: int) -> bool:
+	var limit := Item.get_def(id).stack
+	var room := (GameConfig.INV_CAPACITY - cargo.size()) * limit
+	for stack in cargo:
+		if stack.id == id:
+			room += limit - stack.count
+	return room >= count
+
+
+## Clamped to max_ammo, so a purchase cannot push the player over the cap.
+##
+## Nothing in the water hands you torpedoes any more — not enemies, not wrecks —
+## so the only caller for this is the harbour shop, and until that lands it has
+## none. Kept rather than deleted because it is the shop's whole purpose and
+## the cap it enforces is not obvious enough to reinvent.
 func add_ammo(amount: int) -> void:
 	if amount <= 0 or hp <= 0:
 		return

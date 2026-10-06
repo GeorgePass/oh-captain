@@ -1,19 +1,23 @@
 class_name Pickup
 extends Node2D
-## A drifting coin or torpedo crate. Both are drawn by hand, like everything
+## A drifting coin or a piece of salvage. Both are drawn by hand, like everything
 ## else here.
 ##
 ## Within PICKUP_MAGNET_RADIUS the player pulls them in, accelerating as they
 ## close, and they are collected on contact. Further out they just sit in the
 ## silt, which is what makes looting wrecks a reason to slow down.
 
-enum Kind { GOLD, AMMO }
+enum Kind { GOLD, ITEM }
 
 ## The container node carries this, so anything spawning loot can find it.
 const GROUP := "pickups"
 
 var kind: int = Kind.GOLD
 var amount := 1
+## Which kind of cargo, when `kind` is ITEM. A separate field rather than a
+## wider `kind`, because cargo has its own numbering and gold is not one of
+## the things in it.
+var item_id := 0
 
 var _velocity := Vector2.ZERO
 var _bob := 0.0
@@ -81,9 +85,14 @@ func _physics_process(delta: float) -> void:
 
 
 func _collect(player: Player) -> void:
-	if kind == Kind.AMMO:
-		player.add_ammo(amount)
-		AudioDirector.play_at(get_tree(), &"ammo", global_position, GameConfig.VOL_GOLD)
+	if kind == Kind.ITEM:
+		# All or nothing. A pickup that only half fits would either eat the rest
+		# or have to leave a second one behind, and both are ways of losing cargo
+		# the captain never agreed to lose. Returning false leaves it drifting
+		# until something has been sold and a slot has come free.
+		if not player.add_item(item_id, amount):
+			return
+		AudioDirector.play_at(get_tree(), &"item", global_position, GameConfig.VOL_GOLD)
 	else:
 		player.add_gold(amount)
 		AudioDirector.play_at(get_tree(), &"gold", global_position, GameConfig.VOL_GOLD)
@@ -95,8 +104,8 @@ func _wrap_world() -> void:
 
 
 func _draw() -> void:
-	if kind == Kind.AMMO:
-		_draw_crate()
+	if kind == Kind.ITEM:
+		_draw_item()
 		return
 	# Coin: a disc with a lighter rim, bright enough to spot at range.
 	var glow := 0.35 + 0.15 * sin(_bob * 3.0)
@@ -105,11 +114,12 @@ func _draw() -> void:
 	draw_arc(Vector2.ZERO, 4.6, 0.0, TAU, 14, Color(0.62, 0.45, 0.09), 1.2, true)
 
 
-func _draw_crate() -> void:
-	var box := PackedVector2Array([
-		Vector2(8, -6), Vector2(8, 6), Vector2(-8, 6), Vector2(-8, -6),
-	])
-	draw_colored_polygon(box, Color(0.32, 0.58, 0.62))
-	draw_polyline(GameConfig.closed(box), Color(0.16, 0.32, 0.36), 1.6, true)
-	# A round mark on the face so a crate is not mistaken for a coin.
-	draw_arc(Vector2.ZERO, 3.2, 0.0, TAU, 12, Color(0.78, 0.93, 0.95), 1.4, true)
+## Cargo: the same colour the cargo panel will show it as, so a piece of meat on
+## the floor and a stack already in the hold are recognisably the same thing
+## before you have read anything.
+func _draw_item() -> void:
+	var def := Item.get_def(item_id)
+	var glow := 0.35 + 0.15 * sin(_bob * 3.0)
+	draw_circle(Vector2.ZERO, 9.0, Color(def.color, 0.20 + glow * 0.2))
+	draw_circle(Vector2.ZERO, 5.5, def.color)
+	draw_arc(Vector2.ZERO, 5.5, 0.0, TAU, 14, def.color.darkened(0.5), 1.3, true)

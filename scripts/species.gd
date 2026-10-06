@@ -18,6 +18,20 @@ extends RefCounted
 ## statement of the same fact, and it is precisely the kind of thing that agrees
 ## until the day someone adds a third creature and is in a hurry.
 
+
+## One roll a species makes when it dies: an item, and the chance of it landing.
+## Held by the Profile rather than on the creature because "what a crab leaves
+## behind" is as much part of being a crab as its speed is — and because the
+## numbers used to live on the creature as gold ranges, split across three files
+## that each had to be found and edited together.
+class Drop extends RefCounted:
+	var item: int
+	var chance: float
+
+	func _init(item_: int = 0, chance_: float = 0.0) -> void:
+		item = item_
+		chance = chance_
+
 ## Identity, spawning and presentation for one species. An object rather than a
 ## dictionary entry, so a misspelled key is a compile error instead of a null
 ## that silently means zero.
@@ -47,6 +61,10 @@ class Profile extends RefCounted:
 	## resolved what it is.
 	var radar_halo: float
 
+	## What it leaves behind, rolled independently per entry, so a creature can
+	## leave nothing, one thing, or — for a crab — a chance of two.
+	var drops: Array[Drop] = []
+
 
 ## Every species the game knows about. The spawner and the audio director both
 ## enumerate this, which is what stops them drifting apart.
@@ -71,6 +89,9 @@ static func _fish() -> Profile:
 	p.cry_hostile_hz = 1300.0
 	p.cry_hostile_sweep = 0.55
 	p.radar_halo = 0.0
+	# Common, because a fish is what you will be killing most of, and the hold
+	# should feel like it is filling.
+	p.drops = [Drop.new(Item.FISH_MEAT, 0.75)]
 	return p
 
 
@@ -89,4 +110,10 @@ static func _crab() -> Profile:
 	p.cry_hostile_hz = 300.0
 	p.cry_hostile_sweep = 0.35
 	p.radar_halo = 7.5
+	# Fewer crabs die in any given dive, so the meat is not guaranteed, and the
+	# shell is rare and never stacks — worth going out of your way for.
+	p.drops = [
+		Drop.new(Item.CRAB_MEAT, 0.60),
+		Drop.new(Item.CRAB_SHELL, 0.10),
+	]
 	return p

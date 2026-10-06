@@ -325,10 +325,10 @@ static func gold() -> AudioStreamWAV:
 	return make(buf)
 
 
-## Ammo crate: a lower, flatter double clunk. Deliberately the opposite shape to
-## the coin's rising pair, so the two are distinguishable when they are collected
-## in the same pass over a wreck.
-static func ammo() -> AudioStreamWAV:
+## Cargo: a lower, flatter double clunk. Deliberately the opposite shape to the
+## coin's rising pair, so the two are distinguishable when they are collected in
+## the same pass over a wreck.
+static func item() -> AudioStreamWAV:
 	var seconds := 0.18
 	var n := buffer(seconds).size()
 	var buf := buffer(seconds)

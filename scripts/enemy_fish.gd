@@ -10,8 +10,6 @@ func _init() -> void:
 	turn_rate = GameConfig.ENEMY_TURN_RATE
 	accel = GameConfig.ENEMY_ACCEL
 	contact_damage = GameConfig.FISH_CONTACT_DMG
-	gold_min = GameConfig.FISH_GOLD_MIN
-	gold_max = GameConfig.FISH_GOLD_MAX
 
 
 ## One torpedo is ten damage against five HP, and a graze off a reef is one, and

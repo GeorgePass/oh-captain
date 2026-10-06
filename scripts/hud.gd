@@ -1,6 +1,6 @@
 class_name Hud
 extends CanvasLayer
-## HUD: vitals top-left, radar centred, and the three action buttons.
+## HUD: vitals top-left, radar centred, and the four action buttons.
 
 @onready var hp_label: Label = $Vitals/HP
 @onready var hp_bar: ProgressBar = $Vitals/HPBar
@@ -12,6 +12,8 @@ extends CanvasLayer
 @onready var sonar_button: Button = $Controls/SonarButton
 @onready var lock_button: Button = $Controls/LockButton
 @onready var fire_button: Button = $Controls/FireButton
+@onready var cargo_button: Button = $Controls/CargoButton
+@onready var inventory: InventoryPanel = $Inventory
 @onready var drowning_rect: ColorRect = $Drowning
 
 var player: Player
@@ -33,8 +35,12 @@ func bind(target: Player) -> void:
 	sonar_button.pressed.connect(func() -> void: player.toggle_sonar())
 	lock_button.pressed.connect(func() -> void: player.cycle_lock())
 	fire_button.pressed.connect(func() -> void: player.fire())
+	cargo_button.pressed.connect(toggle_inventory)
 
 	sonar_display.player = player
+	inventory.player = player
+	player.inventory_changed.connect(inventory.queue_redraw)
+	inventory.queue_redraw()
 	_sonar_home = sonar_display.position
 	_on_hp_changed(player.hp, player.max_hp)
 	_on_ammo_changed(player.ammo, player.max_ammo)
@@ -49,6 +55,19 @@ func bind_oxygen(oxygen: Oxygen) -> void:
 	oxygen.oxygen_changed.connect(_on_oxygen_changed)
 	oxygen.drowning_changed.connect(_on_drowning_changed)
 	_on_oxygen_changed(oxygen.current, GameConfig.OXYGEN_MAX)
+
+
+## Mirrors the Cargo button, and deliberately does nothing while the tree is
+## still: the harbour screen owns the keys then, and one menu opening over
+## another is how a pause stops meaning anything.
+func toggle_inventory() -> void:
+	inventory.visible = not inventory.visible
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed(&"inventory"):
+		toggle_inventory()
+		get_viewport().set_input_as_handled()
 
 
 func _process(_delta: float) -> void:
