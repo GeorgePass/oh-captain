@@ -27,7 +27,7 @@ func _ready() -> void:
 ## The sonar is told too. A contact is a claim that something alive is out
 ## there, and without this the radar carried a dead fish around on its dot for
 ## the full sixteen seconds before the contact timed out on its own.
-func _on_enemy_died(dead: Node2D) -> void:
+func _on_enemy_died(dead: SeaEnemy) -> void:
 	var at := dead.global_position
 	# Guarded because a shot already in flight can land on the frame a restart
 	# tears the old world down, and calling into a freed hull is its own crash.

@@ -12,7 +12,7 @@ extends Node2D
 
 ## Re-emitted for every enemy that dies, so whoever owns the consequences of a
 ## death can react without the spawner having to know what they are.
-signal enemy_died(enemy: Node2D)
+signal enemy_died(enemy: SeaEnemy)
 
 const WORLD_SEED := 20260905
 
@@ -185,7 +185,7 @@ func _spawn_one(profile: Species.Profile) -> void:
 	container.add_child(enemy)
 
 
-func _on_enemy_died(dead: Node2D) -> void:
+func _on_enemy_died(dead: SeaEnemy) -> void:
 	enemy_died.emit(dead)
 
 

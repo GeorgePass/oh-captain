@@ -8,7 +8,9 @@ extends Area2D
 ## frame to run the reef line-of-sight test. So the body is left switched off
 ## rather than kept in sync with the growing radius for nothing.
 
-signal reached(enemy: Node2D)
+## Typed to the creature. The scan below walks the enemy group, so it only ever
+## has SeaEnemy in hand, and the handler was casting it back out of a Node2D.
+signal reached(enemy: SeaEnemy)
 
 var radius := 0.0
 var max_radius := GameConfig.SONAR_MAX_RANGE
@@ -39,7 +41,7 @@ func _physics_process(delta: float) -> void:
 ## Emits `reached` for every fish the expanding edge swept past this frame.
 func _scan(prev: float, now: float) -> void:
 	for node in get_tree().get_nodes_in_group(SeaEnemy.GROUP):
-		var enemy := node as Node2D
+		var enemy := node as SeaEnemy
 		if enemy == null or not is_instance_valid(enemy):
 			continue
 		var d := origin.distance_to(enemy.global_position)

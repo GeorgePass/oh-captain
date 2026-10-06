@@ -20,7 +20,11 @@ const GROUP := "enemy"
 const LOCK_RING_COLOR := Color(0.62, 0.86, 0.95, 0.40)
 const LOCK_BRACKET_COLOR := Color(1.0, 0.86, 0.35)
 
-signal died(enemy: Node2D)
+## Typed to the creature rather than to Node2D, so everything downstream —
+## the spawner's relay, the death ripple, the sonar contact it drops — receives
+## an enemy it can act on directly. It used to be Node2D and every consumer
+## re-guessed what it was holding.
+signal died(enemy: SeaEnemy)
 signal hp_changed(hp: int, max_hp: int)
 
 @export var max_hp := 5

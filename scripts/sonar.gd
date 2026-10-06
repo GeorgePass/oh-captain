@@ -70,7 +70,7 @@ func _passive_scan(_delta: float) -> void:
 		return
 	var now := float(Time.get_ticks_msec()) / 1000.0
 	for node in get_tree().get_nodes_in_group(SeaEnemy.GROUP):
-		var enemy := node as Node2D
+		var enemy := node as SeaEnemy
 		if enemy == null or not is_instance_valid(enemy):
 			_blip_at.erase(node)
 			continue
@@ -168,17 +168,21 @@ func _build_ring() -> SonarRing:
 ## ever put on ALERT here, and the player position passed in is the ring's
 ## origin rather than where they actually are, so searching a pinged area
 ## does not walk straight to the hull.
-func _on_ring_reached(enemy: Node2D) -> void:
-	if enemy == null or not is_instance_valid(enemy):
+##
+## The creature is a SeaEnemy, so it is simply told. This used to ask
+## `has_method("set_alert")` and then call the method by name, which is a guess
+## dressed up as a check: every enemy has always had set_alert, and the only
+## thing the guard could do was let a genuine mistake through silently.
+func _on_ring_reached(enemy: SeaEnemy) -> void:
+	if not is_instance_valid(enemy):
 		return
 	# Reefs occlude the ping: a reef between player and enemy hides the contact.
 	if _blocked_by_reef(_ping_origin, enemy.global_position):
 		return
 	reveal(enemy, GameConfig.SONAR_CONTACT_DURATION)
-	if enemy.has_method(&"set_alert"):
-		# Jitter the fix so an alerted search converges on the area, not the hull.
-		var spread := Vector2.from_angle(randf() * TAU) * GameConfig.SONAR_PING_SEARCH_SPREAD
-		enemy.call(&"set_alert", _ping_origin + spread)
+	# Jitter the fix so an alerted search converges on the area, not the hull.
+	var spread := Vector2.from_angle(randf() * TAU) * GameConfig.SONAR_PING_SEARCH_SPREAD
+	enemy.set_alert(_ping_origin + spread)
 
 
 func _blocked_by_reef(from: Vector2, to: Vector2) -> bool:
@@ -191,7 +195,7 @@ func _blocked_by_reef(from: Vector2, to: Vector2) -> bool:
 	return not space.intersect_ray(query).is_empty()
 
 
-func reveal(fish: Node2D, duration: float) -> void:
+func reveal(fish: SeaEnemy, duration: float) -> void:
 	if fish == null or not is_instance_valid(fish):
 		return
 	var current: float = contacts.get(fish, 0.0)
@@ -207,33 +211,27 @@ func reveal(fish: Node2D, duration: float) -> void:
 
 
 ## One blip per acquisition, pitched to species and state so a contact you
-## cannot see is still identifiable by ear.
-func _play_blip(enemy: Node2D) -> void:
-	var director := AudioDirector._find(get_tree())
-	if director == null:
-		return
-	var state_id := AudioDirector.PASSIVE
-	var species := &"fish"
-	if enemy is SeaEnemy:
-		state_id = (enemy as SeaEnemy).state
-		species = (enemy as SeaEnemy).species()
-	AudioDirector.play_at(get_tree(), AudioDirector.blip_key(species, state_id),
+## cannot see is still identifiable by ear. Both come straight off the creature
+## now, instead of the state and species being re-derived from whatever object
+## happened to arrive.
+func _play_blip(enemy: SeaEnemy) -> void:
+	AudioDirector.play_at(get_tree(), AudioDirector.blip_key(enemy.species(), enemy.state),
 		enemy.global_position, GameConfig.VOL_BLIP)
 
 
-func drop(fish: Node2D) -> void:
+func drop(fish: SeaEnemy) -> void:
 	if contacts.has(fish):
 		contacts.erase(fish)
 		contacts_changed.emit(contacts.size())
 
 
-func has_contact(fish: Node2D) -> bool:
+func has_contact(fish: SeaEnemy) -> bool:
 	return contacts.has(fish)
 
 
-## Live contacts as nodes, skipping any that died since the last scan.
-func contact_list() -> Array[Node2D]:
-	var out: Array[Node2D] = []
+## Live contacts as enemies, skipping any that died since the last scan.
+func contact_list() -> Array[SeaEnemy]:
+	var out: Array[SeaEnemy] = []
 	for key in contacts.keys():
 		if is_instance_valid(key):
 			out.append(key)

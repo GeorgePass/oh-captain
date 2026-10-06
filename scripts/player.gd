@@ -312,9 +312,9 @@ func _refresh_lockable() -> void:
 	_lockable = out
 
 
-func contacts() -> Array[Node2D]:
+func contacts() -> Array[SeaEnemy]:
 	if _sonar == null:
-		return [] as Array[Node2D]
+		return [] as Array[SeaEnemy]
 	return _sonar.contact_list()
 
 

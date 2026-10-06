@@ -81,20 +81,18 @@ func _draw() -> void:
 		# Same three colours the creatures themselves are drawn in, so the
 		# radar state and the world state agree.
 		var tint := CONTACT_COLOR
-		if contact is SeaEnemy:
-			var enemy := contact as SeaEnemy
-			if enemy.is_fleeing():
-				tint = FLEEING_COLOR
-			elif enemy.is_hostile():
-				tint = HOSTILE_COLOR
-			elif enemy.is_alert():
-				tint = ALERT_COLOR
-			# Heavier creatures get a halo so they read as heavier at a glance.
-			# Asked of the creature rather than tested for by class, so a new
-			# species is described by its entry in Species and nothing else.
-			var voice := enemy.profile()
-			if voice != null and voice.radar_halo > 0.0:
-				draw_arc(dot, voice.radar_halo, 0.0, TAU, 14, tint.darkened(0.2), 1.6, true)
+		if contact.is_fleeing():
+			tint = FLEEING_COLOR
+		elif contact.is_hostile():
+			tint = HOSTILE_COLOR
+		elif contact.is_alert():
+			tint = ALERT_COLOR
+		# Heavier creatures get a halo so they read as heavier at a glance.
+		# Asked of the creature rather than tested for by class, so a new
+		# species is described by its entry in Species and nothing else.
+		var voice := contact.profile()
+		if voice != null and voice.radar_halo > 0.0:
+			draw_arc(dot, voice.radar_halo, 0.0, TAU, 14, tint.darkened(0.2), 1.6, true)
 		draw_circle(dot, 4.5, tint)
 
 		if contact == locked:
