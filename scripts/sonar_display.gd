@@ -1,6 +1,7 @@
 extends Control
-## Circular radar: player at centre with a facing tick, revealed fish as red
-## dots, and a ring + bracket on the locked target.
+## Circular radar: player at centre with a facing tick, the harbour pinned to
+## the rim whenever it is off-range, revealed fish as red dots, and a ring +
+## bracket on the locked target.
 
 const PLAYER_COLOR := Color(0.95, 0.84, 0.42)
 ## Unknown or merely drifting.
@@ -18,6 +19,12 @@ const BG_COLOR := Color(0.03, 0.11, 0.14, 0.55)
 ## Matches the ping's tint in the world, so the radar circle and the one you
 ## can see through the hull read as the same event.
 const PING_COLOR := Color(0.35, 0.95, 0.85)
+## The harbour's beacon and frontage, matching the colours the world paints.
+const HARBOR_BEACON := Color(1.0, 0.85, 0.45)
+const HARBOR_WALL := Color(0.42, 0.47, 0.54)
+## How far off-range markers keep from the rim so they stay on the disc.
+const CONTACT_MARGIN := 5.0
+const HARBOR_MARGIN := 13.0
 
 @onready var range_label: Label = $RangeLabel
 
@@ -30,6 +37,24 @@ func _ready() -> void:
 
 func _radius() -> float:
 	return minf(size.x, size.y) * 0.5 - 6.0
+
+
+## Clamps an off-disc position to the rim along its bearing instead of culling
+## it, so anything that drifts past the edge keeps pointing the right way. The
+## margin keeps the marker inside the ring rather than straddling it.
+func _pin_to_rim(center: Vector2, radius: float, rel: Vector2, margin: float) -> Vector2:
+	var rim := radius - margin
+	return center + rel.normalized() * rim if rel.length() > rim else center + rel
+
+
+## The harbour in miniature: the same quay wall and gold beacon the world
+## builds, small enough that the beacon still reads on the radar.
+func _draw_harbor(at: Vector2) -> void:
+	draw_rect(Rect2(at + Vector2(-7.0, -4.0), Vector2(14.0, 9.0)), HARBOR_WALL)
+	draw_rect(Rect2(at + Vector2(-7.0, -4.0), Vector2(5.0, 9.0)), Color(0.62, 0.55, 0.30))
+	var beacon := at + Vector2(6.0, -7.0)
+	draw_circle(beacon, 3.2, HARBOR_BEACON)
+	draw_arc(beacon, 5.8, 0.0, TAU, 16, Color(HARBOR_BEACON.r, HARBOR_BEACON.g, HARBOR_BEACON.b, 0.45), 1.4, true)
 
 
 func _process(_delta: float) -> void:
@@ -75,9 +100,7 @@ func _draw() -> void:
 			continue
 		var rel := GameConfig.wrapped_delta(player.global_position, contact.global_position) * scale
 		# Clamp instead of cull: a contact beyond range still hugs the rim.
-		if rel.length() > radius - 5.0:
-			rel = rel.normalized() * (radius - 5.0)
-		var dot := center + rel
+		var dot := _pin_to_rim(center, radius, rel, CONTACT_MARGIN)
 		# Same three colours the creatures themselves are drawn in, so the
 		# radar state and the world state agree.
 		var tint := CONTACT_COLOR
@@ -101,6 +124,12 @@ func _draw() -> void:
 			# Corner ticks read as a reticle even at small sizes.
 			for corner in [Vector2(-1, -1), Vector2(1, -1), Vector2(1, 1), Vector2(-1, 1)]:
 				draw_line(dot + corner * 10.0, dot + corner * 14.0, LOCK_COLOR, 1.5)
+
+	# The harbour is the one thing the radar does not cull. Inside sonar range
+	# it sits at its true bearing; past that the same marker is pinned to the
+	# rim, so the way home stays readable even from the far corner of the map.
+	var harbor_rel := GameConfig.wrapped_delta(player.global_position, GameConfig.HARBOR_POSITION) * scale
+	_draw_harbor(_pin_to_rim(center, radius, harbor_rel, HARBOR_MARGIN))
 
 	# Player mark: hull dot plus a heading tick.
 	draw_circle(center, 5.5, PLAYER_COLOR)
