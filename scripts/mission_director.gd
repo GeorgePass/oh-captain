@@ -105,7 +105,7 @@ func can_accept(id: int) -> bool:
 func accept(id: int) -> bool:
 	if not can_accept(id):
 		return false
-	active = id
+	active = id as ID
 	objective_met = false
 	kills = 0
 	notice = ""
