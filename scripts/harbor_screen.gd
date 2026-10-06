@@ -9,7 +9,9 @@ extends CanvasLayer
 ## The counter sells torpedoes and hull plating and buys whatever stack the
 ## cargo panel has highlighted; the panel sits on its own always-live layer to
 ## the left, so the same click that selects a stack out there is the click that
-## tells this menu what you are trying to sell. Missions are still to come.
+## tells this menu what you are trying to sell. Below the shop sits the
+## harbourmaster's errand board: three contracts when nothing is under way, and
+## the active errand's progress while it is.
 
 signal dock_toggled
 
@@ -21,9 +23,14 @@ signal dock_toggled
 @onready var sel_label: Label = $Panel/Box/SalesRow/SelLabel
 @onready var sell_button: Button = $Panel/Box/SalesRow/SellButton
 @onready var launch_button: Button = $Panel/Box/Launch
+@onready var mission_rows: VBoxContainer = $Panel/Box/MissionRows
+@onready var mission_note: Label = $Panel/Box/MissionNote
 
 var _player: Player
 var _inventory: InventoryPanel
+var _missions: MissionDirector
+## One accept button per errand, in counter order, filled from the scene.
+var _accept_buttons: Array[Button] = []
 
 
 func _ready() -> void:
@@ -32,6 +39,16 @@ func _ready() -> void:
 	buy_torpedo.pressed.connect(_on_buy_torpedo)
 	buy_repair.pressed.connect(_on_buy_repair)
 	sell_button.pressed.connect(_on_sell)
+	# The errand rows are written into the scene in counter order, so index i
+	# here is MissionDirector.LIST[i] there.
+	for i in mission_rows.get_child_count():
+		var row := mission_rows.get_child(i) as HBoxContainer
+		if row == null:
+			continue
+		var accept := row.get_node_or_null("Accept") as Button
+		if accept != null:
+			accept.pressed.connect(_on_accept.bind(i))
+			_accept_buttons.append(accept)
 
 
 ## The hull's numbers are read on demand rather than pushed, because nothing
@@ -49,6 +66,18 @@ func bind_shop(inventory: InventoryPanel) -> void:
 	inventory.selection_changed.connect(_on_selection_changed)
 
 
+## The errand rows read the MissionDirector, so they are told when it changes.
+func bind_missions(missions: MissionDirector) -> void:
+	_missions = missions
+	if missions != null:
+		missions.mission_changed.connect(_on_mission_changed)
+
+
+func _on_mission_changed(_mission: int, _met: bool) -> void:
+	if visible:
+		refresh()
+
+
 func refresh() -> void:
 	if _player == null or not is_instance_valid(_player):
 		return
@@ -62,6 +91,37 @@ func refresh() -> void:
 	buy_repair.disabled = _player.gold < GameConfig.REPAIR_PRICE \
 		or _player.hp >= _player.max_hp
 	_sync_sell_row()
+	_sync_missions()
+
+
+## The counter's errand section. With nothing under way it offers the three
+## contracts; with one under way it steps aside and shows its progress instead
+## - one errand at a time, and the counter will not take a second.
+func _sync_missions() -> void:
+	if _missions == null:
+		mission_rows.visible = false
+		mission_note.visible = false
+		return
+	if _missions.active == MissionDirector.ID.NONE:
+		mission_rows.visible = true
+		mission_note.visible = _missions.notice != ""
+		mission_note.text = _missions.notice
+		for i in _accept_buttons.size():
+			var info := MissionDirector.LIST[i]
+			_accept_buttons[i].disabled = not _missions.can_accept(info.id)
+		return
+	mission_rows.visible = false
+	mission_note.visible = true
+	mission_note.text = "%s  —  %s  —  %d g" % [
+		MissionDirector.info_for(_missions.active).name,
+		_missions.progress_text(), MissionDirector.info_for(_missions.active).reward]
+
+
+func _on_accept(index: int) -> void:
+	if _missions == null or index < 0 or index >= MissionDirector.LIST.size():
+		return
+	if _missions.accept(MissionDirector.LIST[index].id):
+		refresh()
 
 
 ## What the Sell button is about to part you from, or the shrug if nothing is
@@ -79,6 +139,12 @@ func _sync_sell_row() -> void:
 		sell_button.disabled = true
 		return
 	var def := Item.get_def(stack.id)
+	# Worth nothing is not for sale: the harbourmaster's crate is errand cargo,
+	# and a counter that prices it at zero g has a button that agrees.
+	if def.value <= 0:
+		sel_label.text = "Mission cargo — not for sale"
+		sell_button.disabled = true
+		return
 	sel_label.text = "%s  x%d   =   %d g" % [
 		def.name.to_upper(), stack.count, def.value * stack.count]
 	sell_button.disabled = false

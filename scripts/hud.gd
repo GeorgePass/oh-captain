@@ -15,8 +15,12 @@ extends CanvasLayer
 @onready var cargo_button: Button = $Controls/CargoButton
 @onready var inventory: InventoryPanel = $"../InventoryLayer/Inventory"
 @onready var drowning_rect: ColorRect = $Drowning
+@onready var mission_label: Label = $MissionLabel
 
 var player: Player
+## The harbourmaster's errands, read once per change for the line under the
+## radar. Null until Main wires it.
+var missions: MissionDirector
 
 ## Where the radar sits when the water is calm, so drowning can shake it off
 ## that mark and put it back rather than accumulate a drift.
@@ -55,6 +59,30 @@ func bind_oxygen(oxygen: Oxygen) -> void:
 	oxygen.oxygen_changed.connect(_on_oxygen_changed)
 	oxygen.drowning_changed.connect(_on_drowning_changed)
 	_on_oxygen_changed(oxygen.current, GameConfig.OXYGEN_MAX)
+
+
+## The mission line under the radar, and the radar's own copy of the errands:
+## the two read the same director so the text and the pins always agree.
+func bind_missions(director: MissionDirector) -> void:
+	missions = director
+	if director == null:
+		return
+	director.mission_changed.connect(_on_mission_changed)
+	sonar_display.missions = director
+	_update_mission_label()
+
+
+func _on_mission_changed(_mission: int, _met: bool) -> void:
+	_update_mission_label()
+
+
+func _update_mission_label() -> void:
+	if missions == null:
+		mission_label.visible = false
+		return
+	var text: String = missions.hud_text()
+	mission_label.visible = text != ""
+	mission_label.text = text
 
 
 ## Mirrors the Cargo button, and deliberately does nothing while the tree is

@@ -160,6 +160,32 @@ const REPAIR_PRICE := 12
 ## so a repair is a judgement call and not a free full heal.
 const REPAIR_AMOUNT := 25
 
+# --- Outpost ---
+## The supply post on the far side of the water, a swim from home. It docks
+## like the harbour and refills the tank, but sells nothing: its one errand is
+## the harbourmaster's crate.
+const OUTPOST_POSITION := Vector2(1600.0, 0.0)
+## Solid footprint of the built structure, centred on OUTPOST_POSITION.
+const OUTPOST_SIZE := Vector2(300.0, 130.0)
+## How close the hull has to be before the dock key does anything.
+const OUTPOST_DOCK_RADIUS := 260.0
+## Keep-out for world generation, so the anchorage is clear water like the
+## harbour's.
+const OUTPOST_CLEAR := Vector2(340.0, 300.0)
+
+# --- Missions ---
+## The harbourmaster's three errands. Rewards are first-pass numbers; each is
+## paid when the hull docks at the harbour with that mission's objective met.
+const MISSION_REWARD_DELIVERY := 60
+const MISSION_REWARD_KILL := 80
+const MISSION_REWARD_RECOVER := 100
+## How many fish the hunt asks for.
+const KILL_MISSION_TARGET := 6
+## Where the lost cargo went down. Fixed rather than seeded, like the outpost:
+## everyone who takes the errand has to find the same wreck, and the marker on
+## the radar has to point at a place that actually exists.
+const MISSION_WRECK_POSITION := Vector2(-1500.0, 900.0)
+
 # --- Sight ---
 ## How far the captain can actually see, and therefore how far they can lock on.
 ## Plain radial distance, no cone and no line-of-sight test. Sonar reaches far

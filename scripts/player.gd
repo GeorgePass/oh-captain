@@ -259,6 +259,32 @@ func sell_stack(slot: int) -> int:
 	return value
 
 
+## Whether the hold holds at least one of an item. Missions ask this about
+## their cargo so nobody has to reach into the packing to find a crate.
+func has_item(id: int) -> bool:
+	for stack in cargo:
+		if stack.id == id:
+			return true
+	return false
+
+
+## Lifts one unit of an item out of the hold, and says whether anything was
+## taken. The outpost's hand-in uses this rather than sell_stack: a delivery is
+## an errand, not a sale, so no gold moves and the counter's refusal has no say.
+func take_item(id: int) -> bool:
+	for i in cargo.size():
+		var stack := cargo[i]
+		if stack.id != id:
+			continue
+		if stack.count > 1:
+			stack.count -= 1
+		else:
+			cargo.remove_at(i)
+		inventory_changed.emit()
+		return true
+	return false
+
+
 ## Adds cargo, and reports whether all of it fit.
 ##
 ## All or nothing. A partial take would either quietly eat the remainder or

@@ -1,4 +1,4 @@
-[gd_scene load_steps=14 format=3]
+[gd_scene load_steps=16 format=3]
 
 [ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
 [ext_resource type="Script" path="res://scripts/hud.gd" id="2_hud"]
@@ -10,6 +10,8 @@
 [ext_resource type="PackedScene" path="res://scenes/harbor.tscn" id="8_harbor"]
 [ext_resource type="Script" path="res://scripts/oxygen.gd" id="9_oxygen"]
 [ext_resource type="Script" path="res://scripts/inventory_panel.gd" id="10_cargo"]
+[ext_resource type="PackedScene" path="res://scenes/outpost.tscn" id="11_outpost"]
+[ext_resource type="Script" path="res://scripts/mission_director.gd" id="12_missions"]
 
 [node name="Main" type="Node2D"]
 script = ExtResource("1_main")
@@ -33,6 +35,9 @@ position = Vector2(0, 170)
 script = ExtResource("7_spawner")
 
 [node name="Harbor" parent="World" instance=ExtResource("8_harbor")]
+
+[node name="Outpost" parent="World" instance=ExtResource("11_outpost")]
+position = Vector2(1600, 0)
 
 [node name="HUD" type="CanvasLayer" parent="."]
 script = ExtResource("2_hud")
@@ -98,8 +103,28 @@ text = "1200m"
 horizontal_alignment = 1
 modulate = Color(0.6, 0.95, 0.9, 0.8)
 
+[node name="MissionLabel" type="Label" parent="HUD"]
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -560.0
+offset_top = 338.0
+offset_right = -16.0
+offset_bottom = 366.0
+grow_horizontal = 0
+grow_vertical = 1
+mouse_filter = 2
+visible = false
+text = ""
+horizontal_alignment = 2
+theme_override_font_sizes/font_size = 14
+modulate = Color(0.72, 0.95, 0.94, 0.95)
+
 [node name="AudioDirector" type="Node" parent="."]
 script = ExtResource("6_audio")
+
+[node name="Missions" type="Node" parent="."]
+script = ExtResource("12_missions")
 
 [node name="Oxygen" type="Node" parent="."]
 script = ExtResource("9_oxygen")

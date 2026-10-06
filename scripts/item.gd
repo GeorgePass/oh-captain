@@ -14,6 +14,10 @@ extends RefCounted
 const FISH_MEAT := 0
 const CRAB_MEAT := 1
 const CRAB_SHELL := 2
+## The harbourmaster's crate, used for two errands: the one you carry out to
+## the outpost, and the one you recover from the wreck. Value zero on purpose:
+## it is errand cargo, never merchandise, so the counter refuses to sell it.
+const CARGO_CRATE := 3
 
 
 ## One kind of cargo.
@@ -59,6 +63,7 @@ static func _static_init() -> void:
 		Def.new(FISH_MEAT, "Fish Meat", 5, Color(0.86, 0.62, 0.55), 5),
 		Def.new(CRAB_MEAT, "Crab Meat", 3, Color(0.88, 0.44, 0.36), 20),
 		Def.new(CRAB_SHELL, "Crab Shell", 1, Color(0.58, 0.80, 0.74), 50),
+		Def.new(CARGO_CRATE, "Cargo Crate", 1, Color(0.72, 0.60, 0.40), 0),
 	]
 
 

@@ -10,6 +10,8 @@ extends Node2D
 @onready var player: Player = $World/Player
 @onready var spawner: Spawner = $World/Spawner
 @onready var harbor: Harbor = $World/Harbor
+@onready var outpost: Outpost = $World/Outpost
+@onready var missions: MissionDirector = $Missions
 @onready var oxygen: Oxygen = $Oxygen
 @onready var hud: Hud = $HUD
 @onready var game_over: CanvasLayer = $GameOver
@@ -26,10 +28,17 @@ func _ready() -> void:
 	# easy to have missed. This is the one call in the run that happens before
 	# the tree has processed a frame, so it has to be wired first or nobody
 	# would ever pause.
-	harbor.docked_changed.connect(_on_docked_changed)
+	harbor.docked_changed.connect(_on_harbor_docked_changed)
+	outpost.docked_changed.connect(_on_outpost_docked_changed)
 	# The counter reads the cargo panel's selection, so the two have to meet
 	# before the first dock, which opens the panel right alongside the menu.
 	harbor.screen.bind_shop(hud.inventory)
+	# The errand rows read the director, so it has to be told how to reach the
+	# water before anyone opens the menu over it.
+	missions.bind(player, spawner)
+	harbor.screen.bind_missions(missions)
+	outpost.screen.bind_missions(missions)
+	hud.bind_missions(missions)
 	game_over.hide_screen()
 	harbor.set_docked(true)
 
@@ -43,11 +52,24 @@ func _ready() -> void:
 ## it is open for the sale the menu is offering, and the moment the captain
 ## undocks it closes and stops indicating anything — a highlight that outlives
 ## the window it was drawn in is how a sale sells the wrong stack.
-func _on_docked_changed(docked: bool) -> void:
+func _on_harbor_docked_changed(docked: bool) -> void:
 	get_tree().paused = docked
 	if docked:
 		oxygen.refill()
+		# Coming home is how an errand is paid, so the harbour asks the director
+		# the moment the hull is alongside.
+		missions.on_harbor_docked(true)
 	hud.inventory.set_open(docked)
+
+
+## The outpost docks the same way and refills the same tank, but it buys
+## nothing, so the cargo panel stays shut — its one business is the hand-in,
+## which the director takes care of the moment the hull is alongside.
+func _on_outpost_docked_changed(docked: bool) -> void:
+	get_tree().paused = docked
+	if docked:
+		oxygen.refill()
+		missions.on_outpost_docked(true)
 
 
 ## Relays a death to everything still alive. A fish bolts when it sees a

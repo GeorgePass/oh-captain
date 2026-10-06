@@ -200,7 +200,7 @@ func _random_world_point() -> Vector2:
 	var h := GameConfig.WORLD_HALF - 100.0
 	for attempt in GameConfig.HARBOR_CLEAR_ATTEMPTS:
 		var p := Vector2(_rng.randf_range(-h, h), _rng.randf_range(-h, h))
-		if _clear_of_harbour(p):
+		if _clear_of_docks(p):
 			return p
 	# Nothing random came up clear. The keep-out is a few per cent of the world,
 	# so this should not be reachable, but a fallback beats a loop that cannot
@@ -212,13 +212,19 @@ func _random_world_point() -> Vector2:
 ##
 ## Not a nicety. A reef dropped on the harbour would close the only way in, and
 ## wrecks are loot: leaving them strewn across the anchorage turns the first
-## thirty seconds of every dive into a free handout. Rejected draws are thrown
-## away rather than nudged, so what survives is still placed by the same dice
-## as everything else.
-func _clear_of_harbour(p: Vector2) -> bool:
-	var d := p - GameConfig.HARBOR_POSITION
-	return absf(d.x) > GameConfig.HARBOR_CLEAR.x \
-		or absf(d.y) > GameConfig.HARBOR_CLEAR.y
+## thirty seconds of every dive into a free handout. The outpost gets the same
+## protection — it is a second anchorage with its own dock radius, and a reef
+## on its doorstep is a reef on the way out of any errand to it. Rejected draws
+## are thrown away rather than nudged, so what survives is still placed by the
+## same dice as everything else.
+func _clear_of_docks(p: Vector2) -> bool:
+	return _clear_of(GameConfig.HARBOR_POSITION, GameConfig.HARBOR_CLEAR, p) \
+		and _clear_of(GameConfig.OUTPOST_POSITION, GameConfig.OUTPOST_CLEAR, p)
+
+
+func _clear_of(anchor: Vector2, keep_out: Vector2, p: Vector2) -> bool:
+	var d := p - anchor
+	return absf(d.x) > keep_out.x or absf(d.y) > keep_out.y
 
 
 ## A point beyond the visible viewport edge, projected from the player's

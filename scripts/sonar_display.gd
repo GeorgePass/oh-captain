@@ -22,6 +22,11 @@ const PING_COLOR := Color(0.35, 0.95, 0.85)
 ## The harbour's beacon and frontage, matching the colours the world paints.
 const HARBOR_BEACON := Color(1.0, 0.85, 0.45)
 const HARBOR_WALL := Color(0.42, 0.47, 0.54)
+## The outpost's cyan beacon and its platform, matching outpost.gd.
+const OUTPOST_BEACON := Color(0.55, 0.95, 0.9)
+const OUTPOST_WALL := Color(0.22, 0.46, 0.52)
+## The recover errand's crate, the colour Item paints it in the water.
+const CRATE_COLOR := Color(0.72, 0.60, 0.40)
 ## How far off-range markers keep from the rim so they stay on the disc.
 const CONTACT_MARGIN := 5.0
 const HARBOR_MARGIN := 13.0
@@ -29,6 +34,9 @@ const HARBOR_MARGIN := 13.0
 @onready var range_label: Label = $RangeLabel
 
 var player: Player
+## The harbourmaster's errands. Null until Main wires it, so the radar keeps
+## working in any scene that has a player but no missions.
+var missions: MissionDirector
 
 
 func _ready() -> void:
@@ -55,6 +63,24 @@ func _draw_harbor(at: Vector2) -> void:
 	var beacon := at + Vector2(6.0, -7.0)
 	draw_circle(beacon, 3.2, HARBOR_BEACON)
 	draw_arc(beacon, 5.8, 0.0, TAU, 16, Color(HARBOR_BEACON.r, HARBOR_BEACON.g, HARBOR_BEACON.b, 0.45), 1.4, true)
+
+
+## The outpost in miniature: a cyan beacon on a smaller platform, so the far
+## anchorage is told apart from the harbour at a glance.
+func _draw_outpost(at: Vector2) -> void:
+	draw_rect(Rect2(at + Vector2(-6.0, -3.0), Vector2(12.0, 8.0)), OUTPOST_WALL)
+	var beacon := at + Vector2(5.0, -6.0)
+	draw_circle(beacon, 3.0, OUTPOST_BEACON)
+	draw_arc(beacon, 5.6, 0.0, TAU, 16, Color(OUTPOST_BEACON.r, OUTPOST_BEACON.g, OUTPOST_BEACON.b, 0.42), 1.4, true)
+
+
+## The recover errand's wreck: the same crate the world paints on its deck, so
+## the radar pin and the thing you swim to are recognisably the same.
+func _draw_mission_site(at: Vector2) -> void:
+	var r := 6.0
+	draw_rect(Rect2(at + Vector2(-r, -r), Vector2(r * 2.0, r * 2.0)), CRATE_COLOR)
+	draw_rect(Rect2(at + Vector2(-r + 1.5, -r + 1.5), Vector2(r * 2.0 - 3.0, r * 2.0 - 3.0)),
+		Color(0.35, 0.26, 0.14), false, 1.4)
 
 
 func _process(_delta: float) -> void:
@@ -130,6 +156,19 @@ func _draw() -> void:
 	# rim, so the way home stays readable even from the far corner of the map.
 	var harbor_rel := GameConfig.wrapped_delta(player.global_position, GameConfig.HARBOR_POSITION) * scale
 	_draw_harbor(_pin_to_rim(center, radius, harbor_rel, HARBOR_MARGIN))
+
+	# The outpost is a fixture too, and the delivery errand's whole destination,
+	# so it earns the same always-on marker in cyan.
+	var outpost_rel := GameConfig.wrapped_delta(player.global_position, GameConfig.OUTPOST_POSITION) * scale
+	_draw_outpost(_pin_to_rim(center, radius, outpost_rel, HARBOR_MARGIN))
+
+	# The recover errand's wreck shows only while that errand is under way, and
+	# only until the crate is aboard: once you have it, the site's job is done.
+	if missions != null \
+			and missions.active == MissionDirector.ID.RECOVER \
+			and not missions.objective_met:
+		var wreck_rel := GameConfig.wrapped_delta(player.global_position, GameConfig.MISSION_WRECK_POSITION) * scale
+		_draw_mission_site(_pin_to_rim(center, radius, wreck_rel, HARBOR_MARGIN))
 
 	# Player mark: hull dot plus a heading tick.
 	draw_circle(center, 5.5, PLAYER_COLOR)

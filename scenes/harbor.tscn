@@ -68,14 +68,14 @@ anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
 offset_left = -260.0
-offset_top = -220.0
+offset_top = -255.0
 offset_right = 260.0
-offset_bottom = 220.0
+offset_bottom = 255.0
 grow_horizontal = 2
 grow_vertical = 2
 
 [node name="Box" type="VBoxContainer" parent="HarborScreen/Panel"]
-theme_override_constants/separation = 10
+theme_override_constants/separation = 8
 
 [node name="Title" type="Label" parent="HarborScreen/Panel/Box"]
 text = "HARBOR"
@@ -139,10 +139,54 @@ text = "SELL"
 theme_override_font_sizes/font_size = 18
 text = "MISSIONS"
 
-[node name="MissionStub" type="Label" parent="HarborScreen/Panel/Box"]
-text = "Contracts from the harbourmaster  —  opens later"
-modulate = Color(1, 1, 1, 0.55)
+[node name="MissionRows" type="VBoxContainer" parent="HarborScreen/Panel/Box"]
+theme_override_constants/separation = 4
+
+[node name="Row1" type="HBoxContainer" parent="HarborScreen/Panel/Box/MissionRows"]
+theme_override_constants/separation = 10
+
+[node name="Name" type="Label" parent="HarborScreen/Panel/Box/MissionRows/Row1"]
+size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 14
+text = "CARGO RUN — deliver the crate to the outpost  —  60 g"
+
+[node name="Accept" type="Button" parent="HarborScreen/Panel/Box/MissionRows/Row1"]
+custom_minimum_size = Vector2(96, 26)
+focus_mode = 0
+text = "ACCEPT"
+
+[node name="Row2" type="HBoxContainer" parent="HarborScreen/Panel/Box/MissionRows"]
+theme_override_constants/separation = 10
+
+[node name="Name" type="Label" parent="HarborScreen/Panel/Box/MissionRows/Row2"]
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 14
+text = "HUNT — sink 6 fish  —  80 g"
+
+[node name="Accept" type="Button" parent="HarborScreen/Panel/Box/MissionRows/Row2"]
+custom_minimum_size = Vector2(96, 26)
+focus_mode = 0
+text = "ACCEPT"
+
+[node name="Row3" type="HBoxContainer" parent="HarborScreen/Panel/Box/MissionRows"]
+theme_override_constants/separation = 10
+
+[node name="Name" type="Label" parent="HarborScreen/Panel/Box/MissionRows/Row3"]
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 14
+text = "WRECK — recover the crate from the wreck  —  100 g"
+
+[node name="Accept" type="Button" parent="HarborScreen/Panel/Box/MissionRows/Row3"]
+custom_minimum_size = Vector2(96, 26)
+focus_mode = 0
+text = "ACCEPT"
+
+[node name="MissionNote" type="Label" parent="HarborScreen/Panel/Box"]
+text = ""
+horizontal_alignment = 1
+autowrap_mode = 2
+theme_override_font_sizes/font_size = 13
+modulate = Color(0.6, 1.0, 0.94, 0.85)
 
 [node name="Launch" type="Button" parent="HarborScreen/Panel/Box"]
 custom_minimum_size = Vector2(0, 48)

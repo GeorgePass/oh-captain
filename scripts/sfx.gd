@@ -341,6 +341,24 @@ static func item() -> AudioStreamWAV:
 	return make(buf)
 
 
+## Mission turn-in: a bright rising pair of notes, so a contract closing reads
+## as an accomplishment rather than as another pickup. Listened-for once or
+## twice per errand, so it can afford to be recognisable.
+static func mission() -> AudioStreamWAV:
+	var seconds := 0.55
+	var n := buffer(seconds).size()
+	var buf := buffer(seconds)
+
+	var notes := [660.0, 880.0, 1320.0]
+	var starts := [0.0, 0.13, 0.26]
+	for i in 3:
+		var start := int(starts[i] * float(MIX_RATE))
+		for j in range(start, n):
+			var t := float(j - start) / float(MIX_RATE)
+			buf[j] += sin(TAU * notes[i] * t) * env(t, 0.004, 0.10) * 0.5
+	return make(buf)
+
+
 # --- End of run --------------------------------------------------------------
 
 static func game_over() -> AudioStreamWAV:

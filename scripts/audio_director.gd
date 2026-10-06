@@ -182,6 +182,7 @@ func _build_streams() -> void:
 	_streams[&"damage"] = Sfx.damage()
 	_streams[&"gold"] = Sfx.gold()
 	_streams[&"item"] = Sfx.item()
+	_streams[&"mission"] = Sfx.mission()
 	_streams[&"swim"] = Sfx.swim()
 	_streams[&"game_over"] = Sfx.game_over()
 	_streams[&"ambient"] = Sfx.ambient()
