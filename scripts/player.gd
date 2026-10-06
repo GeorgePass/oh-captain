@@ -29,6 +29,8 @@ var _lock_cycle: Array[Node2D] = []
 
 var _sonar: Sonar
 var _damage_cooldown := 0.0
+## Points of hull owed but not yet spent, carried between frames.
+var _drown_bank := 0.0
 
 
 func _ready() -> void:
@@ -144,6 +146,29 @@ func take_damage(amount: int) -> void:
 	_flash(Color(1.7, 0.55, 0.5))
 	# Non-positional: this is the hull being hit, so it comes from the hull.
 	AudioDirector.play(get_tree(), &"damage", GameConfig.VOL_DAMAGE)
+	if hp <= 0:
+		died.emit(self)
+
+
+## The tank has run out. A leak rather than a blow: no red flash and no damage
+## sound, because nothing is striking the hull — the hull is simply running out
+## of air.
+##
+## The fraction banks because a rate this slow arrives as a decimal smaller than
+## a point of hull, and subtracting that from an integer hull truncates to zero
+## every frame: the boat would take damage forever and never actually die. Banked
+## here, it costs a whole point the moment it has added up to one, which is what
+## turns "a few points a second" into a hull that genuinely goes.
+func drown(amount: float) -> void:
+	if hp <= 0:
+		return
+	_drown_bank += amount
+	var whole := int(_drown_bank)
+	if whole <= 0:
+		return
+	_drown_bank -= float(whole)
+	hp = maxi(hp - whole, 0)
+	hp_changed.emit(hp, max_hp)
 	if hp <= 0:
 		died.emit(self)
 

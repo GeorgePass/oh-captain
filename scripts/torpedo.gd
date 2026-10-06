@@ -55,7 +55,13 @@ func _resolve_hits() -> bool:
 			# a reef is audible as a miss.
 			_impact(&"torpedo_hit_flesh")
 			return true
-		if collider is Reef:
+		# Anything on the reef layer stops a torpedo, whether it grew there or
+		# was built. Testing for Reef rather than for the layer meant a shot
+		# against the harbour wall slid along it until it timed out, without a
+		# splash and without a sound — as though the harbour were somewhere the
+		# fish could hide.
+		var body := collider as CollisionObject2D
+		if body != null and (body.collision_layer & GameConfig.LAYER_REEF_BIT) != 0:
 			_impact(&"torpedo_hit_reef")
 			return true
 	return false

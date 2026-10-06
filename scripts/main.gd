@@ -4,11 +4,14 @@ extends Node2D
 ##
 ## Building the world and putting fish back is the Spawner's job. What is left
 ## here is the part that is neither generation nor simulation: how a death
-## ripples out to everything still alive, and how a run ends.
+## ripples out to everything still alive, how a dive is held still while the
+## captain is alongside, and how a run ends.
 
 @onready var player: Player = $World/Player
 @onready var spawner: Spawner = $World/Spawner
-@onready var hud: CanvasLayer = $HUD
+@onready var harbor: Harbor = $World/Harbor
+@onready var oxygen: Oxygen = $Oxygen
+@onready var hud: Hud = $HUD
 @onready var game_over: CanvasLayer = $GameOver
 
 
@@ -16,7 +19,26 @@ func _ready() -> void:
 	spawner.enemy_died.connect(_on_enemy_died)
 	player.died.connect(_on_player_died)
 	hud.bind(player)
+	hud.bind_oxygen(oxygen)
+	# Connected before the first dock rather than after it. The run opens
+	# alongside — the hull starts next to the harbour, with a full tank and
+	# nowhere to be yet — and a child that emits during its parent's setup is
+	# easy to have missed. This is the one call in the run that happens before
+	# the tree has processed a frame, so it has to be wired first or nobody
+	# would ever pause.
+	harbor.docked_changed.connect(_on_docked_changed)
 	game_over.hide_screen()
+	harbor.set_docked(true)
+
+
+## Docking is a pause and nothing else: no special case for enemies, no
+## immunity flag, no timer. Holding the tree still is what makes the harbour
+## safe, and it is also what freezes the tank, the fish and the pings — one
+## rule doing three jobs.
+func _on_docked_changed(docked: bool) -> void:
+	get_tree().paused = docked
+	if docked:
+		oxygen.refill()
 
 
 ## Relays a death to everything still alive. A fish bolts when it sees a

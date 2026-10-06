@@ -1,16 +1,25 @@
+class_name Hud
 extends CanvasLayer
 ## HUD: vitals top-left, radar centred, and the three action buttons.
 
 @onready var hp_label: Label = $Vitals/HP
 @onready var hp_bar: ProgressBar = $Vitals/HPBar
+@onready var oxygen_label: Label = $Vitals/Oxygen
+@onready var oxygen_bar: ProgressBar = $Vitals/OxygenBar
 @onready var ammo_label: Label = $Vitals/Ammo
 @onready var gold_label: Label = $Vitals/Gold
 @onready var sonar_display: Control = $SonarDisplay
 @onready var sonar_button: Button = $Controls/SonarButton
 @onready var lock_button: Button = $Controls/LockButton
 @onready var fire_button: Button = $Controls/FireButton
+@onready var drowning_rect: ColorRect = $Drowning
 
 var player: Player
+
+## Where the radar sits when the water is calm, so drowning can shake it off
+## that mark and put it back rather than accumulate a drift.
+var _sonar_home := Vector2.ZERO
+var _drowning := false
 
 
 func bind(target: Player) -> void:
@@ -26,14 +35,30 @@ func bind(target: Player) -> void:
 	fire_button.pressed.connect(func() -> void: player.fire())
 
 	sonar_display.player = player
+	_sonar_home = sonar_display.position
 	_on_hp_changed(player.hp, player.max_hp)
 	_on_ammo_changed(player.ammo, player.max_ammo)
 	_on_gold_changed(player.gold)
 	_refresh_buttons()
 
 
+## The tank is wired separately from the hull because it is a separate clock:
+## it belongs to the run rather than to the boat, and it can empty while every
+## other reading here stays perfectly still.
+func bind_oxygen(oxygen: Oxygen) -> void:
+	oxygen.oxygen_changed.connect(_on_oxygen_changed)
+	oxygen.drowning_changed.connect(_on_drowning_changed)
+	_on_oxygen_changed(oxygen.current, GameConfig.OXYGEN_MAX)
+
+
 func _process(_delta: float) -> void:
 	_refresh_buttons()
+	# Readings jitter while drowning, as §4.4 asks: an alarm that makes the
+	# instruments themselves harder to read is doing its job. Visual only —
+	# nothing here changes a number the simulation acts on.
+	if _drowning:
+		sonar_display.position = _sonar_home + Vector2(
+			randf_range(-3.0, 3.0), randf_range(-3.0, 3.0))
 
 
 func _refresh_buttons() -> void:
@@ -79,6 +104,27 @@ func _on_ammo_changed(ammo: int, max_ammo: int) -> void:
 
 func _on_gold_changed(gold: int) -> void:
 	gold_label.text = "SALVAGE  %d" % gold
+
+
+func _on_oxygen_changed(current: float, max_oxygen: float) -> void:
+	oxygen_label.text = "OXYGEN  %d%%" % int(current / max_oxygen * 100.0)
+	oxygen_bar.max_value = max_oxygen
+	oxygen_bar.value = current
+	# Turns against you well before it reaches zero, so the alarm has a run-up
+	# rather than arriving on the same frame the damage does.
+	oxygen_bar.modulate = Color(1.0, 0.45, 0.35) if current <= max_oxygen * 0.25 \
+		else Color(0.5, 0.8, 1.0)
+
+
+func _on_drowning_changed(drowning: bool) -> void:
+	_drowning = drowning
+	drowning_rect.visible = drowning
+	# The sonar dims as well as jitters: past empty the picture you are reading
+	# is the first thing to go, which is what makes the last few seconds of air
+	# feel different from the first.
+	sonar_display.modulate = Color(0.62, 0.66, 0.7) if drowning else Color.WHITE
+	if not drowning:
+		sonar_display.position = _sonar_home
 
 
 func _on_fire_state_changed() -> void:

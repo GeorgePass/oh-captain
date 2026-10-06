@@ -1,0 +1,115 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/harbor.gd" id="1_harbor"]
+[ext_resource type="Script" path="res://scripts/harbor_screen.gd" id="2_screen"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_solid"]
+size = Vector2(420, 170)
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_zone"]
+radius = 330.0
+
+[node name="Harbor" type="Node2D"]
+z_index = -1
+script = ExtResource("1_harbor")
+
+[node name="Solid" type="StaticBody2D" parent="."]
+collision_layer = 4
+collision_mask = 0
+
+[node name="Shape" type="CollisionShape2D" parent="Solid"]
+shape = SubResource("RectangleShape2D_solid")
+
+[node name="DockZone" type="Area2D" parent="."]
+collision_layer = 0
+collision_mask = 1
+
+[node name="Shape" type="CollisionShape2D" parent="DockZone"]
+shape = SubResource("CircleShape2D_zone")
+
+[node name="DockHintLayer" type="CanvasLayer" parent="."]
+layer = 1
+
+[node name="Hint" type="Label" parent="DockHintLayer"]
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -220.0
+offset_top = -106.0
+offset_right = 220.0
+offset_bottom = -76.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 2
+theme_override_font_sizes/font_size = 17
+text = "Press  H  to come alongside"
+horizontal_alignment = 1
+modulate = Color(0.6, 0.95, 0.9, 0.92)
+
+[node name="HarborScreen" type="CanvasLayer" parent="."]
+layer = 5
+process_mode = 3
+script = ExtResource("2_screen")
+
+[node name="Dim" type="ColorRect" parent="HarborScreen"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.02, 0.06, 0.09, 0.84)
+
+[node name="Panel" type="PanelContainer" parent="HarborScreen"]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -260.0
+offset_top = -200.0
+offset_right = 260.0
+offset_bottom = 200.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Box" type="VBoxContainer" parent="HarborScreen/Panel"]
+theme_override_constants/separation = 12
+
+[node name="Title" type="Label" parent="HarborScreen/Panel/Box"]
+text = "HARBOR"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 30
+
+[node name="Stats" type="Label" parent="HarborScreen/Panel/Box"]
+text = "SALVAGE  0      HULL  50 / 50      TORPEDOES  20 / 20"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 16
+
+[node name="ShopTitle" type="Label" parent="HarborScreen/Panel/Box"]
+theme_override_font_sizes/font_size = 18
+text = "SUPPLY"
+
+[node name="ShopStub" type="Label" parent="HarborScreen/Panel/Box"]
+text = "Torpedoes, hull plating and air flasks  —  opens later"
+modulate = Color(1, 1, 1, 0.55)
+
+[node name="MissionTitle" type="Label" parent="HarborScreen/Panel/Box"]
+theme_override_font_sizes/font_size = 18
+text = "MISSIONS"
+
+[node name="MissionStub" type="Label" parent="HarborScreen/Panel/Box"]
+text = "Contracts from the harbourmaster  —  opens later"
+modulate = Color(1, 1, 1, 0.55)
+
+[node name="Launch" type="Button" parent="HarborScreen/Panel/Box"]
+custom_minimum_size = Vector2(0, 48)
+focus_mode = 0
+text = "LAUNCH  [H]"
+
+[node name="Note" type="Label" parent="HarborScreen/Panel/Box"]
+text = "Nothing reaches you alongside, and the tank refills here."
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 14
+modulate = Color(1, 1, 1, 0.5)

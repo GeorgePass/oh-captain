@@ -34,6 +34,39 @@ const WORLD_HALF := WORLD_SIZE * 0.5
 ## separate afterwards.
 const WORLD_SEED := 20260905
 
+# --- Harbour ---
+## The harbour sits at the one point the wrap never moves, which makes it the
+## only fixed thing in the world: the place you leave from, and the only place
+## a dive can be ended on purpose.
+const HARBOR_POSITION := Vector2.ZERO
+## Solid footprint of the built structure, centred on HARBOR_POSITION. A
+## rectangle rather than a reef blob, because this one was built.
+const HARBOR_SIZE := Vector2(420.0, 170.0)
+## How close the hull has to be before the dock key does anything.
+const HARBOR_DOCK_RADIUS := 330.0
+## Keep-out for world generation, comfortably wider than the dock radius so the
+## anchorage is clear water rather than a reef you have to squeeze past.
+const HARBOR_CLEAR := Vector2(460.0, 380.0)
+## Rejection-sampling budget for that keep-out. At about four per cent of the
+## world this is a handful of redraws in practice; two hundred makes exhausting
+## it a rounding error rather than a coin flip that quietly drops a reef on the
+## only way in.
+const HARBOR_CLEAR_ATTEMPTS := 200
+
+# --- Oxygen ---
+## Seconds of air in a full tank, and therefore the length of a dive. This is
+## what gives going out to a wreck a cost: the distance is returnable, the clock
+## is not.
+const OXYGEN_MAX := 90.0
+## Air burned per second. Frozen while the tree is paused, which is what docking
+## does, so being alongside is the one moment the tank does not empty.
+const OXYGEN_DRAIN := 1.0
+## Once the tank is empty the hull starts losing integrity instead. Deliberately
+## not routed through take_damage: drowning is not something striking the boat,
+## so it carries no flash and no sound. This rate is what makes running out a
+## problem worth turning around for rather than a slow way to lose.
+const OXYGEN_DROWN_DPS := 4.0
+
 # --- Pace ---
 ## One knob for the tempo of the whole game. Every speed below is a base value
 ## times this, so relative speeds are held by construction rather than by
